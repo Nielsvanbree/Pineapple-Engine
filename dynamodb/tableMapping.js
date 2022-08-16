@@ -128,7 +128,7 @@ function prepEncodedEntityResponse(
 ) {
   const newItem = entity.pk ? false : true;
   let response = {
-    pk: `${newItem ? `${uuidv4()}` : entity.pk}`,
+    pk: `${newItem ? `${entity.e}_${uuidv4()}` : entity.pk}`,
     sk: entity.sk,
     newItem,
     attributes: {},

@@ -49,7 +49,7 @@ module.exports = {
   }),
 
   prefixedUuid: (value, helpers) => {
-    const [prefix, uuidv4] = value.split("_");
+    const [, uuidv4] = value.split("_");
 
     if (
       !/^[0-9A-F]{8}-[0-9A-F]{4}-4[0-9A-F]{3}-[89AB][0-9A-F]{3}-[0-9A-F]{12}$/i.test(

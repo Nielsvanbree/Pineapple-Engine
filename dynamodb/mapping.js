@@ -4,8 +4,9 @@ const {
 } = require('./tableMapping');
 
 class Mapping {
-  constructor(entityName) {
+  constructor(entityName, mappingConfig) {
     this.entityValues = { entity: entityName };
+    this.mappingConfig = mappingConfig;
   }
 
   encodeEntity(entity) {
@@ -13,17 +14,17 @@ class Mapping {
     if (entity.version === undefined || entity.version === null)
       entity.version = 0;
 
-    const decodedToEncodedMapping = getReversedMapping(encodedToDecodedMapping);
+    const decodedToEncodedMapping = getReversedMapping(this.mappingConfig.encodedToDecodedMapping);
     return encodeEntity(
       entity,
       decodedToEncodedMapping,
-      sortKeyConstruction,
-      queryableAttributes
+      this.mappingConfig.sortKeyConstruction,
+      this.mappingConfig.queryableAttributes
     );
   }
 
   decodeEntity(entity) {
-    return decodeEntity(entity, encodedToDecodedMapping);
+    return decodeEntity(entity, this.mappingConfig.encodedToDecodedMapping);
   }
 
   encodeAttachment(attachmentName) {
@@ -62,14 +63,14 @@ class Mapping {
 }
 
 function getAttachmentMapping(attachmentName) {
-  if (!attachmentsMapping[attachmentName])
+  if (!this.mapping.attachmentsMapping[attachmentName])
     throw {
       statusCode: 404,
       code: "ResourceNotFoundException",
       message: `No attachment with the name ${attachmentName} found`,
     };
 
-  return attachmentsMapping[attachmentName];
+  return this.mapping.attachmentsMapping[attachmentName];
 }
 
 function getReversedMapping(mappingToReverse) {
@@ -81,22 +82,5 @@ function getReversedMapping(mappingToReverse) {
 
   return reversedMapping;
 }
-
-// The pk of a table is always prefixed with the value inside the entity field (this.entityValues.entity)
-const encodedToDecodedMapping = {
-  pk: "paymentId",
-  eid1: "orderId",
-  eid2: "stakeholderId",
-};
-
-const sortKeyConstruction = {
-  sk: ["entity", "version"],
-  esk: ["entity", "eventId", "status"],
-};
-
-// Because the order of the array determines the priority of the attribute when querying, this config will overwrite the global priority config
-const queryableAttributes = ["pk", "eid1", "eid2", "e"];
-
-const attachmentsMapping = {};
 
 module.exports = Mapping;
