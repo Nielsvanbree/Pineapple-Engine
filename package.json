@@ -1,0 +1,20 @@
+{
+  "name": "accelerator-pineapple",
+  "version": "1.0.0",
+  "description": "Serverless Pineapples will rule the world 1 day",
+  "main": "pineapple.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "Niels van Bree",
+  "license": "ISC",
+  "dependencies": {
+    "aws-sdk": "^2.1195.0",
+    "aws-xray-sdk": "^3.3.6",
+    "https": "^1.0.0",
+    "joi": "^17.6.0",
+    "lodash": "^4.17.21",
+    "uuid": "^8.3.2"
+  }
+}
