@@ -1,18 +1,12 @@
 const TableInterface = require('./tableInterface');
 const Mapping = require("./mapping");
 const { j, validate } = require('../helpers/joi');
-// const {
-//   interfaceCreateSchema,
-//   getSchema,
-//   listEntitySchema,
-//   listAttachmentsSchema,
-//   interfaceUpdateSchema,
-// } = require("./schema");
 
 class DynamoDB {
-  constructor(tableName, entityName) {
-    this.mapping = new Mapping(entityName);
+  constructor({ tableName, entityName }, mappingConfig, schemas) {
+    this.mapping = new Mapping(entityName, mappingConfig);
     this.tableInterface = new TableInterface(tableName);
+    this.schemas = schemas;
   }
 
   async getDynamoRecord(
@@ -30,7 +24,7 @@ class DynamoDB {
         versionsCallback
       );
 
-    // validate(getSchema, entity, undefined, "interface");
+    validate(this.schemas.getSchema, entity, undefined, "interface");
 
     return this.tableInterface.getDynamoRecord(
       entity,
@@ -42,7 +36,7 @@ class DynamoDB {
   }
 
   async listDynamoRecords(entity, limit, exclusiveStartKey, callback) {
-    // validate(listEntitySchema, entity, undefined, "interface");
+    validate(this.schemas.listEntitySchema, entity, undefined, "interface");
 
     return this.tableInterface.listDynamoRecords(
       entity,
@@ -63,7 +57,7 @@ class DynamoDB {
     exclusiveStartKey,
     callback
   ) {
-    // validate(listAttachmentsSchema, { attachment }, undefined, "interface");
+    validate(this.schemas.listAttachmentsSchema, { attachment }, undefined, "interface");
 
     return this.tableInterface.listAttachmentsForEntity(
       entityId,
@@ -80,29 +74,29 @@ class DynamoDB {
 
   async updateDynamoRecord(entity, username, callback) {
     // We build the schema with requestContext's username, because that allows internal updates by other Lambdas by authorizing on the username in the schema
-    // const schema = j
-    //   .object()
-    //   .keys({
-    //     requestContext: j.object().keys({
-    //       authorizer: j.object().keys({
-    //         username: j.string(),
-    //       }),
-    //     }),
-    //     entity: j
-    //       .alternatives()
-    //       .try(interfaceUpdateSchema, interfaceCreateSchema),
-    //   })
-    //   .unknown()
-    //   .required();
+    const schema = j
+      .object()
+      .keys({
+        requestContext: j.object().keys({
+          authorizer: j.object().keys({
+            username: j.string(),
+          }),
+        }),
+        entity: j
+          .alternatives()
+          .try(this.schemas.interfaceUpdateSchema, this.schemas.interfaceCreateSchema),
+      })
+      .unknown()
+      .required();
 
-    // const input = {
-    //   requestContext: {
-    //     authorizer: { username },
-    //   },
-    //   entity,
-    // };
+    const input = {
+      requestContext: {
+        authorizer: { username },
+      },
+      entity,
+    };
 
-    // validate(schema, input, undefined, "interface");
+    validate(schema, input, undefined, "interface");
 
     return this.tableInterface.updateDynamoRecord(
       entity,
@@ -121,7 +115,7 @@ class DynamoDB {
     exclusiveStartKey,
     versionsCallback
   ) {
-    // validate(getSchema, entity, undefined, "interface");
+    validate(this.schemas.getSchema, entity, undefined, "interface");
   
     return this.tableInterface.listAllVersionsForEntity(
       entity,
@@ -131,6 +125,7 @@ class DynamoDB {
       this.mapping.decodeAttachment.bind(this.mapping),
       limit,
       exclusiveStartKey,
+      this.mapping.entityValues,
       versionsCallback
     );
   }

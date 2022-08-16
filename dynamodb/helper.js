@@ -24,6 +24,23 @@ const ItemShape =
   documentClient.service.api.operations.getItem.output.members.Item;
 
 module.exports = {
+  get: async function (params) {
+    try {
+      var dynamoResult = await documentClient.get(params).promise();
+      return transformResult(dynamoResult);
+    } catch (error) {
+      var options = {
+        service: {
+          name: "DynamoDB",
+          method: "get",
+          params: params,
+        },
+      };
+      console.log(JSON.stringify(options, null, 2));
+      throw error;
+    }
+  },
+  
   dynamoGetPineapple: async function (TableName, pk, sk) {
     const params = {
       TableName,

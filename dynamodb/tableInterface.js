@@ -20,6 +20,7 @@ class TableInterface {
     attachmentDecoder,
     Limit,
     exclusiveStartKey,
+    entityValues,
     versionsCallback
   ) {
     exclusiveStartKey = decodeExclusiveStartKey(exclusiveStartKey);
@@ -72,7 +73,7 @@ class TableInterface {
     versions.map((v) => {
       v = decoder(v);
       if (v.version === 0) response.entity = v;
-      if (!v.entity) v.entity = process.env.ENTITY_NAME;
+      if (!v.entity) v.entity = entityValues.entity;
       return v;
     });
   
