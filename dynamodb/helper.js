@@ -96,9 +96,9 @@ module.exports = {
         sk,
       },
       ExpressionAttributeNames: {
-        "#updatedAt": "ua",
-        "#updatedBy": "ub",
-        "#latestVersion": "lv",
+        "#updatedAt": "updatedAt",
+        "#updatedBy": "updatedBy",
+        "#latestVersion": "latestVersion",
       },
       ExpressionAttributeValues: {
         ":updatedAt": now,
@@ -114,8 +114,8 @@ module.exports = {
       attributes = {
         ...attributes,
         ...createdAttributes,
-        ca: now,
-        cb: executorId,
+        createdAt: now,
+        createdBy: executorId,
       };
       if (newItemCheck)
         params.ConditionExpression =
@@ -194,7 +194,7 @@ module.exports = {
       "updatedAt",
       "updatedBy",
       "sk",
-      "esk"
+      "gsiSk1"
     ];
 
     attributesToStrip.forEach((ats) => {

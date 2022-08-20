@@ -1,5 +1,5 @@
 module.exports = {
   entityName: "payment",
   dataSource: "dynamodb",
-  tableName: "accelerator-sls-development-pineapple-prov"
+  tableName: "fruitful-pineapple-prov"
 }

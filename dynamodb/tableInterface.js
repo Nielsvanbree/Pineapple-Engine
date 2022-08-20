@@ -70,11 +70,11 @@ class TableInterface {
     if (res.lastEvaluatedKey)
       response.lastEvaluatedKey = encodeLastEvaluatedKey(res.lastEvaluatedKey);
   
-    versions.map((v) => {
-      v = decoder(v);
-      if (v.version === 0) response.entity = v;
-      if (!v.entity) v.entity = entityValues.entity;
-      return v;
+    versions.map((version) => {
+      version = decoder(version);
+      if (version.version === 0) response.entity = version;
+      if (!version.entity) version.entity = entityValues.entity;
+      return version;
     });
   
     if (!response.entity)
@@ -123,7 +123,7 @@ class TableInterface {
   ) {
     exclusiveStartKey = decodeExclusiveStartKey(exclusiveStartKey);
     let entityFromDynamo = getDynamoRecord(
-      decoder({ pk: entityPk, v: 0 }),
+      decoder({ pk: entityPk, version: 0 }),
       encoder,
       decoder
     );
@@ -140,16 +140,16 @@ class TableInterface {
   
     let params = {
       TableName: this.tableName,
-      IndexName: "pk-esk",
-      KeyConditionExpression: "#pk = :pk AND begins_with(#esk, :esk)",
+      IndexName: "pk-gsiSk1",
+      KeyConditionExpression: "#pk = :pk AND begins_with(#gsiSk1, :gsiSk1)",
       Limit,
       ExpressionAttributeNames: {
         "#pk": "pk",
-        "#esk": "esk",
+        "#gsiSk1": "gsiSk1",
       },
       ExpressionAttributeValues: {
         ":pk": entityPk,
-        ":esk": attachment.attributes.esk,
+        ":gsiSk1": attachment.attributes.gsiSk1,
       },
     };
   
@@ -187,8 +187,8 @@ class TableInterface {
     );
   
     let { pk, sk } = encoder(entity);
-    if (entity.v !== 0)
-      sk = sk.replace(/#v\d+/, `#v${constructSkVersion(entity.v)}`);
+    if (entity.version !== 0)
+      sk = sk.replace(/#v\d+/, `#v${constructSkVersion(entity.version)}`);
   
     let res = await dynamoGetPineapple(this.tableName, pk, sk);
     if (!res) return {};
@@ -221,8 +221,8 @@ class TableInterface {
       newItem,
       attributes,
       creationAttributes,
-      eskContains,
-      eskMisses,
+      gsiSk1Contains,
+      gsiSk1Misses,
       sortKeyConstruction,
       usedMapping,
     } = encoder(entity);
@@ -247,43 +247,43 @@ class TableInterface {
     const entityShouldNotUpdate =
       !newItem &&
       Object.keys(attributes).length === 1 &&
-      Object.keys(attributes)[0] === "esk";
+      Object.keys(attributes)[0] === "gsiSk1";
     let decodedRecord;
   
     if (!entityShouldNotUpdate) {
-      // We could eliminate this if we always enforce the presence of all esk attributes in the joi schemas, but that might limit the freedom of the use of our APIs
+      // We could eliminate this if we always enforce the presence of all gsiSk1 attributes in the joi schemas, but that might limit the freedom of the use of our APIs
       if (
         sortKeyConstruction &&
-        sortKeyConstruction.esk &&
-        (!eskContains || eskContains.length < sortKeyConstruction.esk.length)
+        sortKeyConstruction.gsiSk1 &&
+        (!gsiSk1Contains || gsiSk1Contains.length < sortKeyConstruction.gsiSk1.length)
       ) {
-        let shouldEskBeUpdated;
-        sortKeyConstruction.esk.forEach((key) => {
+        let shouldGsiSk1BeUpdated;
+        sortKeyConstruction.gsiSk1.forEach((key) => {
           const encodedKeyName = usedMapping[key];
-          if (attributes[encodedKeyName] || newItem) shouldEskBeUpdated = true;
+          if (attributes[encodedKeyName] || newItem) shouldGsiSk1BeUpdated = true;
         });
   
-        if (!shouldEskBeUpdated) delete attributes.esk;
+        if (!shouldGsiSk1BeUpdated) delete attributes.gsiSk1;
         else {
           if (!newItem) {
             // Get the missing data from DynamoDB in case of an update
             const entity = await dynamoGetPineapple(this.tableName, pk, sk);
             if (entity) {
-              let stopEskConstruction = false;
-              eskMisses.forEach((missingKey) => {
+              let stopGsiSk1Construction = false;
+              gsiSk1Misses.forEach((missingKey) => {
                 if (
-                  !stopEskConstruction &&
+                  !stopGsiSk1Construction &&
                   (entity[missingKey] || attributes[missingKey])
                 )
-                  attributes.esk += attributes[missingKey]
+                  attributes.gsiSk1 += attributes[missingKey]
                     ? attributes[missingKey] + "#"
                     : entity[missingKey] + "#";
-                else stopEskConstruction = true;
+                else stopGsiSk1Construction = true;
               });
             }
           }
-          if (attributes.esk.charAt(attributes.esk.length - 1) === "#")
-            attributes.esk = attributes.esk.slice(0, -1);
+          if (attributes.gsiSk1.charAt(attributes.gsiSk1.length - 1) === "#")
+            attributes.gsiSk1 = attributes.gsiSk1.slice(0, -1);
         }
       }
   
@@ -342,9 +342,11 @@ class TableInterface {
     callback
   ) {
     exclusiveStartKey = decodeExclusiveStartKey(exclusiveStartKey);
+
     let attachmentName,
       entityEncoder = encoder,
       entityDecoder = decoder;
+
     [entity, encoder, decoder, attachmentName] = initAttachmentMapping(
       entity,
       encoder,
@@ -353,7 +355,7 @@ class TableInterface {
       attachmentDecoder
     );
   
-    let { pk, newItem, attributes, queryableAttributes, eskContains } =
+    let { pk, newItem, attributes, queryableAttributes, gsiSk1Contains } =
       encoder(entity);
   
     // If newItem is true it means there was no pk to query for, but one was generated automatically
@@ -369,20 +371,21 @@ class TableInterface {
       IndexName: indexName,
       Limit,
       ExpressionAttributeNames: {
-        "#esk": "esk",
+        "#gsiSk1": "gsiSk1",
       },
       ExpressionAttributeValues: {
-        ":esk": attributes["esk"].replace(/#$/, ""), // Trim # from string if it's the last character for better inclusion here
+        ":gsiSk1": attributes["gsiSk1"].replace(/#$/, ""), // Trim # from string if it's the last character for better inclusion here
       },
     };
   
     const decodedKey = getDecodedKeyFromAttribute(keyName, "", decoder);
+    
     params.ExpressionAttributeNames[`#${decodedKey}`] = keyName;
     params.ExpressionAttributeValues[`:${decodedKey}`] =
-      keyName === "e" ? entity.e : attributes[keyName];
-    params.KeyConditionExpression = `#${decodedKey} = :${decodedKey} AND begins_with(#esk, :esk)`;
+      keyName === "entity" ? entity.entity : attributes[keyName];
+    params.KeyConditionExpression = `#${decodedKey} = :${decodedKey} AND begins_with(#gsiSk1, :gsiSk1)`;
   
-    addFiltersToListParams(params, attributes, keyName, eskContains, decoder);
+    addFiltersToListParams(params, attributes, keyName, gsiSk1Contains, decoder);
   
     if (exclusiveStartKey) params.ExclusiveStartKey = exclusiveStartKey;
   
@@ -413,17 +416,17 @@ class TableInterface {
   }
 
   // We prefix the version with 0's in order for the version to be able to be queried in the correct sorting order
-  constructSkVersion(v) {
+  constructSkVersion(version) {
     // A length of 6 gives us up to a million versions for the same object
     const skVersionLength = 6;
-    const versionLength = v.toString().length;
+    const versionLength = version.toString().length;
     let skVersion = "";
 
     for (let i = 0; i < skVersionLength - versionLength; i++) {
       skVersion += "0";
     }
 
-    return (skVersion += v.toString());
+    return (skVersion += version.toString());
   }
 
 }
@@ -446,21 +449,21 @@ function getKeyAndIndexToUse(entityAttributes, queryableAttributes) {
   for (let i = 0; i < queryableAttributes.length; i++) {
     const queryableKey = queryableAttributes[i];
     if (entityAttributesArray.includes(queryableKey))
-      return { keyName: queryableKey, indexName: `${queryableKey}-esk` };
+      return { keyName: queryableKey, indexName: `${queryableKey}-gsiSk1` };
   }
 
-  return { keyName: "e", indexName: "e-esk" };
+  return { keyName: "entity", indexName: "entity-gsiSk1" };
 }
 
 function addFiltersToListParams(
   params,
   attributes,
   keyName,
-  eskContains,
+  gsiSk1Contains,
   decoder
 ) {
   Object.entries(attributes).forEach(([key, value]) => {
-    if (key === keyName || key === "esk" || eskContains.includes(key)) return;
+    if (key === keyName || key === "gsiSk1" || gsiSk1Contains.includes(key)) return;
 
     const decodedKey = getDecodedKeyFromAttribute(key, value, decoder);
 
@@ -491,11 +494,12 @@ function initAttachmentMapping(
 }
 
 function getDecodedKeyFromAttribute(key, value, decoder) {
-  let encodedObj = {},
-    decodedObj;
+  let encodedObj = {};
+
   encodedObj[key] = value;
-  decodedObj = decoder(encodedObj);
+  const decodedObj = decoder(encodedObj);
   const decodedKeys = decodedObj ? Object.keys(decodedObj) : [];
+
   return decodedKeys && decodedKeys[0] ? decodedKeys[0] : key;
 }
 

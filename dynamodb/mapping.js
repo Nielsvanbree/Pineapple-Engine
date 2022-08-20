@@ -90,7 +90,7 @@ function encode({
   };
 
   encodeEntityAttributes(entity, usedMapping);
-  const { eskContains, eskMisses } = addSortKeysToEntity({
+  const { gsiSk1Contains, gsiSk1Misses } = addSortKeysToEntity({
     entity,
     sortKeyConstruction,
     usedMapping,
@@ -98,8 +98,8 @@ function encode({
 
   return prepEncodedEntityResponse({
     entity,
-    eskContains,
-    eskMisses,
+    gsiSk1Contains,
+    gsiSk1Misses,
     sortKeyConstruction,
     queryableAttributesFromEntity,
     usedMapping,
@@ -164,15 +164,15 @@ function decodeEntityAttributes(entity, usedMapping) {
 
   // These values should never be necessary to work with in your code, so we can leave them out when decoding
   if (entity.sk) delete entity.sk;
-  if (entity.esk) delete entity.esk;
+  if (entity.gsiSk1) delete entity.gsiSk1;
   if (entity.entity) delete entity.entity;
 
   return entity;
 }
 
 function addSortKeysToEntity({ entity, sortKeyConstruction, usedMapping }) {
-  let eskContains = [],
-    eskMisses = [];
+  let gsiSk1Contains = [],
+    gsiSk1Misses = [];
   Object.entries(sortKeyConstruction).forEach(([key, constructionArray]) => {
     let value = "";
 
@@ -191,29 +191,29 @@ function addSortKeysToEntity({ entity, sortKeyConstruction, usedMapping }) {
           ? `v${entity[encodedKeyName]}`
           : entity[encodedKeyName];
 
-      if (key === "esk") eskContains.push(encodedKeyName);
+      if (key === "gsiSk1") gsiSk1Contains.push(encodedKeyName);
     }
 
     entity[key] = value;
   });
 
   if (
-    sortKeyConstruction.esk &&
-    sortKeyConstruction.esk.length !== eskContains.length
+    sortKeyConstruction.gsiSk1 &&
+    sortKeyConstruction.gsiSk1.length !== gsiSk1Contains.length
   ) {
-    sortKeyConstruction.esk.forEach((key) => {
+    sortKeyConstruction.gsiSk1.forEach((key) => {
       const encodedKeyName = usedMapping[key] || key;
-      if (!eskContains.includes(encodedKeyName)) eskMisses.push(encodedKeyName);
+      if (!gsiSk1Contains.includes(encodedKeyName)) gsiSk1Misses.push(encodedKeyName);
     });
   }
 
-  return { entity, eskContains, eskMisses };
+  return { entity, gsiSk1Contains, gsiSk1Misses };
 }
 
 function prepEncodedEntityResponse({
   entity,
-  eskContains,
-  eskMisses,
+  gsiSk1Contains,
+  gsiSk1Misses,
   sortKeyConstruction,
   queryableAttributesFromEntity,
   usedMapping,
@@ -221,14 +221,14 @@ function prepEncodedEntityResponse({
   const newItem = entity.pk ? false : true;
 
   const response = {
-    pk: `${newItem ? `${entity.e}_${uuidv4()}` : entity.pk}`,
+    pk: `${newItem ? `${entity.entity}_${uuidv4()}` : entity.pk}`,
     sk: entity.sk,
     newItem,
     attributes: {},
     creationAttributes: {},
     queryableAttributes: queryableAttributesFromEntity || QUERYABLE_ATTRIBUTES,
-    eskContains,
-    eskMisses,
+    gsiSk1Contains,
+    gsiSk1Misses,
     sortKeyConstruction,
     usedMapping,
   };
@@ -247,27 +247,17 @@ function prepEncodedEntityResponse({
   return response;
 }
 
-const GLOBAL_ENCODED_TO_DECODED_MAPPING = {
-  e: "entity",
-  t: "type",
-  s: "status",
-  r: "role",
-  v: "version",
-  lv: "latestVersion",
-  ca: "createdAt",
-  cb: "createdBy",
-  ua: "updatedAt",
-  ub: "updatedBy",
-};
+// Optionally add attributes names that should always be mapped to another name, such as v for version
+const GLOBAL_ENCODED_TO_DECODED_MAPPING = {};
 
 // These attributes are only created, never updated
-const CREATION_ATTRIBUTES = ["v", "e", "ca", "cb"];
+const CREATION_ATTRIBUTES = ["version", "entity", "createdAt", "createdBy"];
 
 // Key attributes of the base table
 const KEY_ATTRIBUTES = ["pk", "sk"];
 
 // Attributes that can be used to query with
 // The order of the array determines the priority of the attribute when listing
-const QUERYABLE_ATTRIBUTES = ["pk", "eid1", "eid2", "e"];
+const QUERYABLE_ATTRIBUTES = ["pk", "gsiPk1", "gsiPk2", "entity"];
 
 module.exports = Mapping;
