@@ -177,7 +177,6 @@ module.exports = {
     let newImage;
 
     if (OldImage) oldImage = module.exports.translateStreamImage(OldImage);
-
     if (NewImage) newImage = module.exports.translateStreamImage(NewImage);
 
     return { eventName, oldImage, newImage };
@@ -194,9 +193,8 @@ module.exports = {
       "createdBy",
       "updatedAt",
       "updatedBy",
-      "sortId",
-      "extSortId",
-      "entity",
+      "sk",
+      "esk"
     ];
 
     attributesToStrip.forEach((ats) => {
