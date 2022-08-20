@@ -96,9 +96,9 @@ module.exports = {
         sk,
       },
       ExpressionAttributeNames: {
-        "#updatedAt": "ua",
-        "#updatedBy": "ub",
-        "#latestVersion": "lv",
+        "#updatedAt": "updatedAt",
+        "#updatedBy": "updatedBy",
+        "#latestVersion": "latestVersion",
       },
       ExpressionAttributeValues: {
         ":updatedAt": now,
@@ -114,8 +114,8 @@ module.exports = {
       attributes = {
         ...attributes,
         ...createdAttributes,
-        ca: now,
-        cb: executorId,
+        createdAt: now,
+        createdBy: executorId,
       };
       if (newItemCheck)
         params.ConditionExpression =
@@ -177,7 +177,6 @@ module.exports = {
     let newImage;
 
     if (OldImage) oldImage = module.exports.translateStreamImage(OldImage);
-
     if (NewImage) newImage = module.exports.translateStreamImage(NewImage);
 
     return { eventName, oldImage, newImage };
@@ -194,9 +193,8 @@ module.exports = {
       "createdBy",
       "updatedAt",
       "updatedBy",
-      "sortId",
-      "extSortId",
-      "entity",
+      "sk",
+      "gsiSk1"
     ];
 
     attributesToStrip.forEach((ats) => {
