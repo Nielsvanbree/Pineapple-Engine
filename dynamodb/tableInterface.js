@@ -54,8 +54,8 @@ class TableInterface {
   
     const [res, latestVersion, previousVersion] = await Promise.all([
       query(params),
-      getSpecificVersion(pk, `${sk}0`, decoder, exclusiveStartKey, "latest"),
-      getSpecificVersion(
+      this.getSpecificVersion(pk, `${sk}0`, decoder, exclusiveStartKey, "latest"),
+      this.getSpecificVersion(
         exclusiveStartKey ? exclusiveStartKey.pk : undefined,
         exclusiveStartKey ? exclusiveStartKey.sk : undefined,
         decoder
@@ -78,7 +78,7 @@ class TableInterface {
     });
   
     if (!response.entity)
-      response.entity = await getSpecificVersion(pk, `${sk}0`, decoder);
+      response.entity = await this.getSpecificVersion(pk, `${sk}0`, decoder);
   
     versions = versions.filter((v) => v.version !== 0);
   
@@ -188,7 +188,7 @@ class TableInterface {
   
     let { pk, sk } = encoder(entity);
     if (entity.version !== 0)
-      sk = sk.replace(/#v\d+/, `#v${constructSkVersion(entity.version)}`);
+      sk = sk.replace(/#v\d+/, `#v${this.constructSkVersion(entity.version)}`);
   
     let res = await dynamoGetPineapple(this.tableName, pk, sk);
     if (!res) return {};
@@ -259,7 +259,7 @@ class TableInterface {
       ) {
         let shouldGsiSk1BeUpdated;
         sortKeyConstruction.gsiSk1.forEach((key) => {
-          const encodedKeyName = usedMapping[key];
+          const encodedKeyName = usedMapping[key] ?? key;
           if (attributes[encodedKeyName] || newItem) shouldGsiSk1BeUpdated = true;
         });
   
@@ -429,18 +429,18 @@ class TableInterface {
     return (skVersion += version.toString());
   }
 
-}
+  async getSpecificVersion(pk, sk, decoder, exclusiveStartKey, type) {
+    exclusiveStartKey = decodeExclusiveStartKey(exclusiveStartKey);
+    if (!pk || !sk || (type === "latest" && !exclusiveStartKey)) return undefined;
+  
+    const version = await dynamoGetPineapple(this.tableName, pk, sk);
+    if (!version)
+      // Any custom error handling when the object does not exist can go here
+      return undefined;
+  
+    return decoder(version);
+  }
 
-async function getSpecificVersion(pk, sk, decoder, exclusiveStartKey, type) {
-  exclusiveStartKey = decodeExclusiveStartKey(exclusiveStartKey);
-  if (!pk || !sk || (type === "latest" && !exclusiveStartKey)) return undefined;
-
-  const version = await dynamoGetPineapple(this.tableName, pk, sk);
-  if (!version)
-    // Any custom error handling when the object does not exist can go here
-    return undefined;
-
-  return decoder(version);
 }
 
 function getKeyAndIndexToUse(entityAttributes, queryableAttributes) {

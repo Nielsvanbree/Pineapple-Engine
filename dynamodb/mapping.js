@@ -187,7 +187,7 @@ function addSortKeysToEntity({ entity, sortKeyConstruction, usedMapping }) {
         break;
 
       value +=
-        encodedKeyName === "v"
+        encodedKeyName === "version"
           ? `v${entity[encodedKeyName]}`
           : entity[encodedKeyName];
 

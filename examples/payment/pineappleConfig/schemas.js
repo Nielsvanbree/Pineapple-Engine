@@ -20,6 +20,7 @@ const baseEntitySchemaWithoutId = j
       ),
     productId: j.string().regex(/^product_/).custom(prefixedUuid),
     orderId: j.string().regex(/^order_/).custom(prefixedUuid),
+    updatedBy: j.string()
   })
   .unknown(false)
   .required();
