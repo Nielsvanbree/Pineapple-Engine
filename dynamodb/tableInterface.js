@@ -14,28 +14,24 @@ class TableInterface {
 
   async listAllVersionsForEntity(
     entity,
-    encoder,
-    decoder,
-    attachmentEncoder,
-    attachmentDecoder,
+    mappingClassInstance,
     Limit,
     exclusiveStartKey,
-    entityValues,
     versionsCallback
   ) {
     exclusiveStartKey = decodeExclusiveStartKey(exclusiveStartKey);
     entity.version = "";
     let attachmentName;
+    let encoder;
+    let decoder;
+
     [entity, encoder, decoder, attachmentName] = initAttachmentMapping(
       entity,
-      encoder,
-      decoder,
-      attachmentEncoder,
-      attachmentDecoder
+      mappingClassInstance
     );
-  
+
     const { pk, sk } = encoder(entity);
-  
+
     let params = {
       TableName: this.tableName,
       KeyConditionExpression: "#pk = :pk AND begins_with(#sk, :sk)",
@@ -49,12 +45,18 @@ class TableInterface {
         ":sk": sk,
       },
     };
-  
+
     if (exclusiveStartKey) params.ExclusiveStartKey = exclusiveStartKey;
-  
+
     const [res, latestVersion, previousVersion] = await Promise.all([
       query(params),
-      this.getSpecificVersion(pk, `${sk}0`, decoder, exclusiveStartKey, "latest"),
+      this.getSpecificVersion(
+        pk,
+        `${sk}0`,
+        decoder,
+        exclusiveStartKey,
+        "latest"
+      ),
       this.getSpecificVersion(
         exclusiveStartKey ? exclusiveStartKey.pk : undefined,
         exclusiveStartKey ? exclusiveStartKey.sk : undefined,
@@ -62,30 +64,32 @@ class TableInterface {
       ),
     ]);
     let versions = res.items;
-  
+
     if (latestVersion) versions.unshift(latestVersion);
     if (previousVersion) versions.unshift(previousVersion);
-  
+
     let response = {};
     if (res.lastEvaluatedKey)
       response.lastEvaluatedKey = encodeLastEvaluatedKey(res.lastEvaluatedKey);
-  
+
     versions.map((version) => {
       version = decoder(version);
       if (version.version === 0) response.entity = version;
-      if (!version.entity) version.entity = entityValues.entity;
+      if (!version.entity)
+        version.entity = mappingClassInstance.entityValues.entity;
       return version;
     });
-  
+
     if (!response.entity)
       response.entity = await this.getSpecificVersion(pk, `${sk}0`, decoder);
-  
+
     versions = versions.filter((v) => v.version !== 0);
-  
+
     // The compareVersions compares values of a version with the previous version, which also sorts the array based on the version number
     // We have to leave out arrays inside arrays for now, because the object comparison function doesn't support it correctly yet!
     // If you want to omit this version comparison or if you need to make changes to it, use the versionsCallback
-    if (versionsCallback) versions = versionsCallback(versions, compareVersions);
+    if (versionsCallback)
+      versions = versionsCallback(versions, compareVersions);
     else
       versions = compareVersions(versions, {}, [
         "createdAt",
@@ -94,11 +98,11 @@ class TableInterface {
         "updatedBy",
         "version",
       ]);
-  
+
     // We're only using the previous version for the comparison functionality, but it shouldn't be returned, because we already returned this version in the previous call
     if (previousVersion)
       versions = versions.filter((v) => v.version !== previousVersion.version);
-  
+
     if (response.entity) response.entity.versions = versions;
     if (attachmentName)
       response = {
@@ -106,7 +110,7 @@ class TableInterface {
         entity: undefined,
         lastEvaluatedKey: encodeLastEvaluatedKey(response.lastEvaluatedKey),
       };
-  
+
     return response;
   }
 
@@ -128,7 +132,7 @@ class TableInterface {
       decoder
     );
     let attachmentName;
-  
+
     [attachment, , , attachmentName] = initAttachmentMapping(
       { attachment },
       encoder,
@@ -137,7 +141,7 @@ class TableInterface {
       attachmentDecoder
     );
     attachment = attachmentEncoder(attachmentName)(attachment);
-  
+
     let params = {
       TableName: this.tableName,
       IndexName: "pk-gsiSk1",
@@ -152,59 +156,53 @@ class TableInterface {
         ":gsiSk1": attachment.attributes.gsiSk1,
       },
     };
-  
+
     if (exclusiveStartKey) params.ExclusiveStartKey = exclusiveStartKey;
-  
+
     if (callback && typeof callback === "function") params = callback(params);
-  
+
     const response = await query(params);
-  
+
     response.items = response.items.map((item) => {
       return { attachmentName, ...attachmentDecoder(attachmentName)(item) };
     });
-  
+
     return {
       entity: (await entityFromDynamo).entity,
       attachments: response.items,
       lastEvaluatedKey: encodeLastEvaluatedKey(response.lastEvaluatedKey),
     };
   }
-  
+
   async getDynamoRecord(
     entity,
-    encoder,
-    decoder,
-    attachmentEncoder,
-    attachmentDecoder
+    mappingClassInstance
   ) {
     let attachmentName;
+    let encoder;
+    let decoder;
+
     [entity, encoder, decoder, attachmentName] = initAttachmentMapping(
       entity,
-      encoder,
-      decoder,
-      attachmentEncoder,
-      attachmentDecoder
+      mappingClassInstance
     );
-  
+
     let { pk, sk } = encoder(entity);
     if (entity.version !== 0)
       sk = sk.replace(/#v\d+/, `#v${this.constructSkVersion(entity.version)}`);
-  
+
     let res = await dynamoGetPineapple(this.tableName, pk, sk);
     if (!res) return {};
-  
+
     return {
       entity: attachmentName ? undefined : decoder(res),
       att: attachmentName ? decoder(res) : undefined,
     };
   }
-  
+
   async updateDynamoRecord(
     entity,
-    encoder,
-    decoder,
-    attachmentEncoder,
-    attachmentDecoder,
+    mappingClassInstance,
     username,
     callback,
     type = "entity"
@@ -214,7 +212,16 @@ class TableInterface {
       attachment = { ...entity.attachment };
       delete entity.attachment;
     }
-  
+
+    const encoder =
+      type === "entity"
+        ? mappingClassInstance.encodeEntity.bind(mappingClassInstance)
+        : mappingClassInstance.encodeAttachment.bind(mappingClassInstance);
+    const decoder =
+      type === "entity"
+        ? mappingClassInstance.decodeEntity.bind(mappingClassInstance)
+        : mappingClassInstance.decodeAttachment.bind(mappingClassInstance);
+
     let {
       pk,
       sk,
@@ -228,41 +235,40 @@ class TableInterface {
     } = encoder(entity);
     if (type === "attachment")
       attributes = { ...attributes, ...creationAttributes };
-  
+
     if (attachment) {
       const attachmentName = Object.keys(attachment)[0];
       attachment[attachmentName].pk = pk;
       attachment = updateDynamoRecord(
         attachment[attachmentName],
-        attachmentEncoder(attachmentName),
-        attachmentDecoder(attachmentName),
-        undefined,
-        undefined,
+        mappingClassInstance,
         username,
         callback,
         "attachment"
       );
     }
-  
+
     const entityShouldNotUpdate =
       !newItem &&
       Object.keys(attributes).length === 1 &&
       Object.keys(attributes)[0] === "gsiSk1";
     let decodedRecord;
-  
+
     if (!entityShouldNotUpdate) {
       // We could eliminate this if we always enforce the presence of all gsiSk1 attributes in the joi schemas, but that might limit the freedom of the use of our APIs
       if (
         sortKeyConstruction &&
         sortKeyConstruction.gsiSk1 &&
-        (!gsiSk1Contains || gsiSk1Contains.length < sortKeyConstruction.gsiSk1.length)
+        (!gsiSk1Contains ||
+          gsiSk1Contains.length < sortKeyConstruction.gsiSk1.length)
       ) {
         let shouldGsiSk1BeUpdated;
         sortKeyConstruction.gsiSk1.forEach((key) => {
           const encodedKeyName = usedMapping[key] ?? key;
-          if (attributes[encodedKeyName] || newItem) shouldGsiSk1BeUpdated = true;
+          if (attributes[encodedKeyName] || newItem)
+            shouldGsiSk1BeUpdated = true;
         });
-  
+
         if (!shouldGsiSk1BeUpdated) delete attributes.gsiSk1;
         else {
           if (!newItem) {
@@ -286,10 +292,10 @@ class TableInterface {
             attributes.gsiSk1 = attributes.gsiSk1.slice(0, -1);
         }
       }
-  
+
       // We skip the same item check for attachments since there's no way of knowing up front if it exists or not
       const sameItemCheck = type === "entity" ? true : false;
-  
+
       let params = await dynamoUpdatePineapple(
         this.tableName,
         pk,
@@ -303,16 +309,15 @@ class TableInterface {
         true,
         (key, value) => {
           // We get the attribute that will be added to the params object and turn the encoded key into a decoded key, because that will make the params object more readable for the backend engineer in case the callback is needed within the update API
-          const usedDecoder = type === "entity" ? decoder : attachmentDecoder;
-          return getDecodedKeyFromAttribute(key, value, usedDecoder);
+          return getDecodedKeyFromAttribute(key, value, decoder);
         }
       );
-  
+
       if (callback && typeof callback === "function") {
         // Do something extra with the params that is not included in the default dynamoUpdatePineapplePineapple before updating the DynamoDB record, such as appending a list
         params = callback(params);
       }
-  
+
       try {
         decodedRecord = decoder((await update(params)).item);
       } catch (error) {
@@ -323,49 +328,42 @@ class TableInterface {
         decodedRecord = error;
       }
     }
-  
+
     let response = {};
     if (attachment) response.attachment = (await attachment).entity;
     if (!entityShouldNotUpdate) response.entity = decodedRecord;
-  
+
     return response;
   }
-  
+
   async listDynamoRecords(
     entity,
-    encoder,
-    decoder,
-    attachmentEncoder,
-    attachmentDecoder,
+    mappingClassInstance,
     Limit,
     exclusiveStartKey,
     callback
   ) {
     exclusiveStartKey = decodeExclusiveStartKey(exclusiveStartKey);
-
-    let attachmentName,
-      entityEncoder = encoder,
-      entityDecoder = decoder;
+    let attachmentName;
+    let encoder;
+    let decoder;
 
     [entity, encoder, decoder, attachmentName] = initAttachmentMapping(
       entity,
-      encoder,
-      decoder,
-      attachmentEncoder,
-      attachmentDecoder
+      mappingClassInstance
     );
-  
+
     let { pk, newItem, attributes, queryableAttributes, gsiSk1Contains } =
       encoder(entity);
-  
+
     // If newItem is true it means there was no pk to query for, but one was generated automatically
     if (!newItem) attributes = { pk, ...attributes };
-  
+
     const { keyName, indexName } = getKeyAndIndexToUse(
       attributes,
       queryableAttributes
     );
-  
+
     let params = {
       TableName: this.tableName,
       IndexName: indexName,
@@ -377,22 +375,28 @@ class TableInterface {
         ":gsiSk1": attributes["gsiSk1"].replace(/#$/, ""), // Trim # from string if it's the last character for better inclusion here
       },
     };
-  
+
     const decodedKey = getDecodedKeyFromAttribute(keyName, "", decoder);
-    
+
     params.ExpressionAttributeNames[`#${decodedKey}`] = keyName;
     params.ExpressionAttributeValues[`:${decodedKey}`] =
       keyName === "entity" ? entity.entity : attributes[keyName];
     params.KeyConditionExpression = `#${decodedKey} = :${decodedKey} AND begins_with(#gsiSk1, :gsiSk1)`;
-  
-    addFiltersToListParams(params, attributes, keyName, gsiSk1Contains, decoder);
-  
+
+    addFiltersToListParams(
+      params,
+      attributes,
+      keyName,
+      gsiSk1Contains,
+      decoder
+    );
+
     if (exclusiveStartKey) params.ExclusiveStartKey = exclusiveStartKey;
-  
+
     if (callback && typeof callback === "function") params = callback(params);
-  
+
     const response = await query(params);
-  
+
     response.items = await Promise.all(
       response.items.map(async (item) => {
         const decoded = { ...decoder(item) };
@@ -400,15 +404,14 @@ class TableInterface {
           // We're getting the entity object belonging to this attachment as well, because our goal is to list entities that have a certain attachment
           const { entity } = await getDynamoRecord(
             decoder(item),
-            entityEncoder,
-            entityDecoder
+            mappingClassInstance
           );
           return { entity, attachment: decoded };
         }
         return { entity: decoded };
       })
     );
-  
+
     return {
       items: response.items,
       lastEvaluatedKey: encodeLastEvaluatedKey(response.lastEvaluatedKey),
@@ -431,16 +434,16 @@ class TableInterface {
 
   async getSpecificVersion(pk, sk, decoder, exclusiveStartKey, type) {
     exclusiveStartKey = decodeExclusiveStartKey(exclusiveStartKey);
-    if (!pk || !sk || (type === "latest" && !exclusiveStartKey)) return undefined;
-  
+    if (!pk || !sk || (type === "latest" && !exclusiveStartKey))
+      return undefined;
+
     const version = await dynamoGetPineapple(this.tableName, pk, sk);
     if (!version)
       // Any custom error handling when the object does not exist can go here
       return undefined;
-  
+
     return decoder(version);
   }
-
 }
 
 function getKeyAndIndexToUse(entityAttributes, queryableAttributes) {
@@ -463,7 +466,8 @@ function addFiltersToListParams(
   decoder
 ) {
   Object.entries(attributes).forEach(([key, value]) => {
-    if (key === keyName || key === "gsiSk1" || gsiSk1Contains.includes(key)) return;
+    if (key === keyName || key === "gsiSk1" || gsiSk1Contains.includes(key))
+      return;
 
     const decodedKey = getDecodedKeyFromAttribute(key, value, decoder);
 
@@ -477,20 +481,35 @@ function addFiltersToListParams(
 
 function initAttachmentMapping(
   entity,
-  encoder,
-  decoder,
-  attachmentEncoder,
-  attachmentDecoder
+  mappingClassInstance
+  // encoder,
+  // decoder,
+  // attachmentEncoder,
+  // attachmentDecoder
 ) {
-  if (!entity.attachment) return [entity, encoder, decoder];
+  if (!entity.attachment)
+    return [
+      entity,
+      mappingClassInstance.encodeEntity.bind(mappingClassInstance),
+      mappingClassInstance.decodeEntity.bind(mappingClassInstance),
+    ];
 
   const attachmentName = Object.keys(entity.attachment)[0];
-  encoder = attachmentEncoder(attachmentName);
-  decoder = attachmentDecoder(attachmentName);
+  encoder = mappingClassInstance
+    .encodeAttachment(attachmentName)
+    .bind(mappingClassInstance);
+  decoder = mappingClassInstance
+    .decodeAttachment(attachmentName)
+    .bind(mappingClassInstance);
   entity = _.merge(entity, entity.attachment[attachmentName]);
   delete entity.attachment;
 
-  return [entity, encoder, decoder, attachmentName];
+  return [
+    entity,
+    mappingClassInstance.encodeEntity.bind(mappingClassInstance),
+    mappingClassInstance.decodeEntity.bind(mappingClassInstance),
+    attachmentName,
+  ];
 }
 
 function getDecodedKeyFromAttribute(key, value, decoder) {

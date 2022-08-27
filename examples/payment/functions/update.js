@@ -6,8 +6,8 @@ const payment = new Pineapple(pineappleConfig);
 
 async function update() {
   try {
-    const res = await payment.dynamodb.updateDynamoRecord(
-      testEvent,
+    const res = await payment.dynamodb.update(
+      { ...testEvent, userId: "niels" },
       "niels",
       (params) => {
         console.log("params", params);

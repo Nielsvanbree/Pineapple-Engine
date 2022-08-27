@@ -6,7 +6,7 @@ const payment = new Pineapple(pineappleConfig);
 
 async function list() {
   try {
-    const { items, lastEvaluatedKey } = await payment.dynamodb.listDynamoRecords(
+    const { items, lastEvaluatedKey } = await payment.dynamodb.list(
       testEvent,
       10,
       undefined,

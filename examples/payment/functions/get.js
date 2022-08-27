@@ -6,7 +6,7 @@ const payment = new Pineapple(pineappleConfig);
 
 async function getWithVersions() {
   try {
-    const { entity, lastEvaluatedKey } = await payment.dynamodb.getDynamoRecord(
+    const { entity, lastEvaluatedKey } = await payment.dynamodb.get(
       testEvent,
       true,
       10,
@@ -26,7 +26,7 @@ async function getWithVersions() {
 
 async function get() {
   try {
-    const { entity } = await payment.dynamodb.getDynamoRecord(
+    const { entity } = await payment.dynamodb.get(
       testEvent
     );
   
@@ -37,7 +37,7 @@ async function get() {
   }
 }
 
-get().then(res => {
+getWithVersions().then(res => {
   console.log("🚀 ~ file: update.js ~ line 15 ~ update ~ res", res);
 }).catch(err => {
   console.error("🚀 ~ file: update.js ~ line 17 ~ update ~ err", err);
