@@ -117,14 +117,16 @@ class TableInterface {
   async listAttachmentsForEntity(
     entityPk,
     attachment,
-    encoder,
-    decoder,
-    attachmentEncoder,
-    attachmentDecoder,
+    mappingClassInstance,
     Limit,
     exclusiveStartKey,
     callback
   ) {
+    const encoder = mappingClassInstance.encodeEntity.bind(mappingClassInstance);
+    const decoder = mappingClassInstance.decodeEntity.bind(mappingClassInstance);
+    const attachmentEncoder = mappingClassInstance.encodeAttachment.bind(mappingClassInstance);
+    const attachmentDecoder = mappingClassInstance.decodeAttachment.bind(mappingClassInstance);
+
     exclusiveStartKey = decodeExclusiveStartKey(exclusiveStartKey);
     let entityFromDynamo = getDynamoRecord(
       decoder({ pk: entityPk, version: 0 }),
@@ -135,10 +137,7 @@ class TableInterface {
 
     [attachment, , , attachmentName] = initAttachmentMapping(
       { attachment },
-      encoder,
-      decoder,
-      attachmentEncoder,
-      attachmentDecoder
+      mappingClassInstance
     );
     attachment = attachmentEncoder(attachmentName)(attachment);
 
@@ -482,10 +481,6 @@ function addFiltersToListParams(
 function initAttachmentMapping(
   entity,
   mappingClassInstance
-  // encoder,
-  // decoder,
-  // attachmentEncoder,
-  // attachmentDecoder
 ) {
   if (!entity.attachment)
     return [

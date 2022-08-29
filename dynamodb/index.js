@@ -56,10 +56,7 @@ class DynamoDB {
     return this.tableInterface.listAttachmentsForEntity(
       entityId,
       attachment,
-      this.mapping.encodeEntity.bind(this.mapping),
-      this.mapping.decodeEntity.bind(this.mapping),
-      this.mapping.encodeAttachment.bind(this.mapping),
-      this.mapping.decodeAttachment.bind(this.mapping),
+      this.mapping,
       limit,
       exclusiveStartKey,
       callback
