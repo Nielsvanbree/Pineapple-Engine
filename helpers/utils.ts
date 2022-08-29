@@ -1,6 +1,5 @@
-const _ = require("lodash/fp/object");
+import { merge } from "lodash/fp";
 
-module.exports = {
   /**
    * Compare 2 objects with each other. The output will be a set of asked keys with new and old values.
    * For arrays, it will output items in the following sets: newItems, deletedItems and comparableItems.
@@ -10,98 +9,107 @@ module.exports = {
    * @param {string} fullKey - Used internally.
    * @param {string} includedKeys - Keys to include in comparison. Keys not present in this set won't be compared. For nested object keys, use the dot notation: obj.nested.param. For object arrays, use [x]: array[x].key1.
    * @param {string} excludedKeys - Keys to exclude in comparison. Keys present in this set won't be compared. For nested object keys, use the dot notation: obj.nested.param. For object arrays, use [x]: array[x].key1.
-   */
-  compareObjects: function (
+  */
+  function compareObjects(
+  newObject: any,
+  oldObject: any,
+  arrayConfig: any,
+  fullKey: String,
+  includedKeys: Array<any>,
+  excludedKeys = ["createdAt", "createdBy", "updatedAt", "updatedBy"],
+  arrayType: any
+) {
+  const newToOld = buildComparisonBetweenTwoObjects(
     newObject,
     oldObject,
     arrayConfig,
     fullKey,
     includedKeys,
-    excludedKeys = ["createdAt", "createdBy", "updatedAt", "updatedBy"],
+    excludedKeys,
     arrayType
-  ) {
-    const newToOld = buildComparisonBetweenTwoObjects(
-      newObject,
-      oldObject,
-      arrayConfig,
-      fullKey,
-      includedKeys,
-      excludedKeys,
-      arrayType
-    );
-    const oldToNew = buildComparisonBetweenTwoObjects(
-      oldObject,
-      newObject,
-      arrayConfig,
-      fullKey,
-      includedKeys,
-      excludedKeys,
-      arrayType,
-      true
-    );
-    return _.merge(newToOld.attr, oldToNew.attr);
-  },
-  compareVersions(
-    versions,
+  );
+  const oldToNew = buildComparisonBetweenTwoObjects(
+    oldObject,
+    newObject,
     arrayConfig,
-    excludedKeys = ["createdAt", "createdBy", "updatedAt", "updatedBy"]
-  ) {
-    if (!excludedKeys) excludedKeys = [];
-    excludedKeys.push("changesToPreviousVersion");
+    fullKey,
+    includedKeys,
+    excludedKeys,
+    arrayType,
+    true
+  );
+  return merge(newToOld.attr, oldToNew.attr);
+};
 
-    versions = versions.sort((a, b) => a.version - b.version);
-    return versions.map((v, i) => {
-      if (i !== 0)
-        v.changesToPreviousVersion = module.exports.compareObjects(
-          v,
-          versions[i - 1],
-          arrayConfig,
-          undefined,
-          undefined,
-          excludedKeys
-        );
-      return v;
-    });
-  },
-  setObject: function (obj, propertyPath, value) {
-    setObjValue(propertyPath, value, obj);
-    return obj;
-  },
-  checkForDifferenceInObjects(comparison, updateRequired = false) {
-    Object.keys(comparison).forEach((key) => {
-      if (!comparison[key].oldValue && !comparison[key].newValue)
-        updateRequired = module.exports.checkForDifferenceInObjects(
-          comparison[key],
-          updateRequired
-        );
-      else if (comparison[key].newValue !== comparison[key].oldValue)
-        updateRequired = true;
-    });
-    return updateRequired;
-  },
-  splitArrayIntoBatches: function (items, batchSize = 25) {
-    let batches = [];
+function compareVersions(
+  versions: Array<any>,
+  arrayConfig: any,
+  excludedKeys = ["createdAt", "createdBy", "updatedAt", "updatedBy"]
+) {
+  if (!excludedKeys) excludedKeys = [];
+  excludedKeys.push("changesToPreviousVersion");
 
-    for (let i = 0; i < items.length; i += batchSize)
-      batches.push(items.slice(i, i + batchSize));
+  versions = versions.sort((a, b) => a.version - b.version);
+  return versions.map((v, i) => {
+    if (i !== 0)
+      v.changesToPreviousVersion = module.exports.compareObjects(
+        v,
+        versions[i - 1],
+        arrayConfig,
+        undefined,
+        undefined,
+        excludedKeys
+      );
+    return v;
+  });
+};
 
-    return batches;
-  },
+function setObject(obj: any, propertyPath: String, value: any) {
+  setObjValue(propertyPath, value, obj);
+  return obj;
+};
+
+function checkForDifferenceInObjects(comparison: any, updateRequired = false) {
+  Object.keys(comparison).forEach((key) => {
+    if (!comparison[key].oldValue && !comparison[key].newValue)
+      updateRequired = module.exports.checkForDifferenceInObjects(
+        comparison[key],
+        updateRequired
+      );
+    else if (comparison[key].newValue !== comparison[key].oldValue)
+      updateRequired = true;
+  });
+  return updateRequired;
+};
+
+function splitArrayIntoBatches(items: Array<any>, batchSize = 25) {
+  let batches = [];
+
+  for (let i = 0; i < items.length; i += batchSize)
+    batches.push(items.slice(i, i + batchSize));
+
+  return batches;
+};
+
+
+export { compareObjects, compareVersions, setObject, checkForDifferenceInObjects, splitArrayIntoBatches };
+
+module.exports = {
 };
 
 function buildComparisonBetweenTwoObjects(
-  newObject,
-  oldObject,
-  arrayComparisonKey,
-  fullKey,
-  includedKeys,
-  excludedKeys,
-  arrayType,
-  reverse
+  newObject: any,
+  oldObject: any,
+  arrayComparisonKey: any,
+  fullKey: String,
+  includedKeys: Array<String>,
+  excludedKeys: Array<String>,
+  arrayType: String | undefined,
+  reverse?: any
 ) {
-  let comparisonToOldObject = { attr: {} };
+  let comparisonToOldObject: any = { attr: {} };
 
-  Object.entries(newObject).map(([key, value]) => {
+  Object.entries(newObject).map(([key, value]: [any, any]) => {
     const newFullKey = `${fullKey ? `${fullKey}.` : ""}${key}`;
     if (
       excludedKeys &&
@@ -111,7 +119,7 @@ function buildComparisonBetweenTwoObjects(
     if (
       includedKeys &&
       !includedKeys.some(
-        (v) =>
+        (v: String) =>
           newFullKey.replace(/\[\d+\]/g, "[x]") === v ||
           v.startsWith(newFullKey + ".")
       )
@@ -129,7 +137,7 @@ function buildComparisonBetweenTwoObjects(
         undefined,
         reverse
       );
-      comparisonToOldObject.attr = _.merge(
+      comparisonToOldObject.attr = merge(
         comparisonToOldObject.attr,
         res.attr
       );
@@ -201,7 +209,7 @@ function buildComparisonBetweenTwoObjects(
                 res.attr[key][arrayType]
               );
           else
-            comparisonToOldObject.attr = _.merge(
+            comparisonToOldObject.attr = merge(
               comparisonToOldObject.attr,
               res.attr
             );
@@ -224,10 +232,10 @@ function buildComparisonBetweenTwoObjects(
   return comparisonToOldObject;
 }
 
-function convertToArray(arrayObject) {
-  Object.entries(arrayObject).forEach(([arrayTypeWithIndex, value]) => {
+function convertToArray(arrayObject: Array<any>) {
+  Object.entries(arrayObject).forEach(([arrayTypeWithIndex, value]: [any, any]) => {
     if (!arrayTypeWithIndex.match(/\[\d+\]/)) return;
-    const arrayType = arrayTypeWithIndex.replace(/\[\d+\]/, "");
+    const arrayType: any = arrayTypeWithIndex.replace(/\[\d+\]/, "");
     if (!arrayObject[arrayType]) arrayObject[arrayType] = [];
     arrayObject[arrayType].push(value);
     delete arrayObject[arrayTypeWithIndex];
@@ -235,7 +243,7 @@ function convertToArray(arrayObject) {
   return arrayObject;
 }
 
-function getArrayType(newValue, oldValue, reverse) {
+function getArrayType(newValue: any, oldValue: any, reverse: any) {
   let arrayType;
   if (
     newValue === oldValue ||
@@ -249,10 +257,10 @@ function getArrayType(newValue, oldValue, reverse) {
   return arrayType;
 }
 
-function findOldArrayObjectByKey(comparisonKey, comparisonKeyValue, oldArray) {
+function findOldArrayObjectByKey(comparisonKey: any, comparisonKeyValue: any, oldArray: Array<any>) {
   if (!oldArray || !Array.isArray(oldArray)) return undefined;
   for (let i = 0; i < oldArray.length; i++) {
-    const itemObject = oldArray[i];
+    const itemObject: any = oldArray[i];
     if (
       itemObject[comparisonKey] &&
       itemObject[comparisonKey] === comparisonKeyValue
@@ -262,11 +270,11 @@ function findOldArrayObjectByKey(comparisonKey, comparisonKeyValue, oldArray) {
   return undefined;
 }
 
-function addNewAttributeToComparison(comparisonObject, attributes, reverse) {
-  let keyComparison = {};
+function addNewAttributeToComparison(comparisonObject: any, attributes: any, reverse: any) {
+  let keyComparison: any = {};
 
   Object.entries(attributes).forEach(([key, value]) => {
-    const realKey = reverse ? reverseKey(key) : key;
+    const realKey: any = reverse ? reverseKey(key) : key;
     if (value !== undefined) keyComparison[realKey] = value;
   });
 
@@ -280,7 +288,7 @@ function addNewAttributeToComparison(comparisonObject, attributes, reverse) {
   else if (!reverse) addNewAttr(keyComparison, comparisonObject);
 }
 
-function addNewAttr(keyComparison, comparisonObject) {
+function addNewAttr(keyComparison: any, comparisonObject: any) {
   if (keyComparison.arrayType)
     keyComparison.fullKey = keyComparison.fullKey.replace(
       /(\[\d+\])/,
@@ -300,8 +308,8 @@ function addNewAttr(keyComparison, comparisonObject) {
     );
 }
 
-function setObjValue(propertyPath, value, obj) {
-  let properties = Array.isArray(propertyPath)
+function setObjValue(propertyPath: String, value: any, obj: any): any {
+  let properties: any = Array.isArray(propertyPath)
     ? propertyPath
     : propertyPath.split(".");
 
@@ -318,7 +326,7 @@ function setObjValue(propertyPath, value, obj) {
   }
 }
 
-function reverseKey(key) {
+function reverseKey(key: String) {
   if (key === "oldValue") return "newValue";
   else if (key === "newValue") return "oldValue";
   return key;

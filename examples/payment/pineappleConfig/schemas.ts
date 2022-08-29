@@ -1,5 +1,5 @@
-const { j, metaInfoSchema, prefixedUuid } = require('../../../helpers/joi');
-
+import { j, metaInfoSchema, prefixedUuid } from "../../../helpers/joi";
+ 
 const nonNegativeInt = j.number().integer().min(0);
 
 // Base schema for the entity, but without an id so we can create an update & create schema from here.
@@ -84,7 +84,7 @@ const outputEntitySchema = createSchema
   })
   .concat(metaInfoSchema);
 
-module.exports = {
+export { 
   createSchema,
   updateSchema,
   getSchema,
