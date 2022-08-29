@@ -1,8 +1,4 @@
-interface iGlobalConfig {
-  entityName: String;
-  dataSource: String;
-  tableName: String;
-}
+import { iGlobalConfig } from "../../../pineapple";
 
 const globalConfig: iGlobalConfig = {
   entityName: "payment",

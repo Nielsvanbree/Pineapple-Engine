@@ -22,7 +22,7 @@ function validate(
   event: any,
   options = {},
   validatedAt = "input",
-  formatValidationError: (error: any) => String
+  formatValidationError?: (error: any) => string
 ) {
   let { error, value } = schema.validate(event, options);
   if (error) {
@@ -60,7 +60,7 @@ function prefixedUuid(value: any) {
 function retrieveAlternativesErrorMessage(error: any) {
   let fullMessage = "";
 
-  error.details[0].context.details.map(({ message }: { message: String }) => {
+  error.details[0].context.details.map(({ message }: { message: string }) => {
     fullMessage += `${fullMessage === "" ? "" : " OR "}${message}`;
   });
 

@@ -1,17 +1,4 @@
-interface iMappingConfig {
-  encodedToDecodedMapping: {
-    pk: String;
-    gsiPk1?: String;
-    gsiPk2?: String;
-    gsiPk3?: String;
-  },
-  sortKeyConstruction: {
-    sk: Array<String>;
-    gsiSk1?: Array<String>;
-  },
-  queryableAttributes: Array<"pk" | "gsiPk1" | "gsiPk2" | "gsiPk3" | "entity">;
-  attachmentsMapping: any;
-}
+import { iMappingConfig } from "../../../pineapple";
 
 const mappingConfig: iMappingConfig = {
   // The pk of a table is always prefixed with the value inside the entity field (entityValues.entity)

@@ -14,10 +14,10 @@ import { merge } from "lodash/fp";
   newObject: any,
   oldObject: any,
   arrayConfig: any,
-  fullKey: String,
-  includedKeys: Array<any>,
+  fullKey?: string,
+  includedKeys?: Array<any>,
   excludedKeys = ["createdAt", "createdBy", "updatedAt", "updatedBy"],
-  arrayType: any
+  arrayType?: any
 ) {
   const newToOld = buildComparisonBetweenTwoObjects(
     newObject,
@@ -52,7 +52,7 @@ function compareVersions(
   versions = versions.sort((a, b) => a.version - b.version);
   return versions.map((v, i) => {
     if (i !== 0)
-      v.changesToPreviousVersion = module.exports.compareObjects(
+      v.changesToPreviousVersion = compareObjects(
         v,
         versions[i - 1],
         arrayConfig,
@@ -64,7 +64,7 @@ function compareVersions(
   });
 };
 
-function setObject(obj: any, propertyPath: String, value: any) {
+function setObject(obj: any, propertyPath: string, value: any) {
   setObjValue(propertyPath, value, obj);
   return obj;
 };
@@ -72,7 +72,7 @@ function setObject(obj: any, propertyPath: String, value: any) {
 function checkForDifferenceInObjects(comparison: any, updateRequired = false) {
   Object.keys(comparison).forEach((key) => {
     if (!comparison[key].oldValue && !comparison[key].newValue)
-      updateRequired = module.exports.checkForDifferenceInObjects(
+      updateRequired = checkForDifferenceInObjects(
         comparison[key],
         updateRequired
       );
@@ -91,20 +91,14 @@ function splitArrayIntoBatches(items: Array<any>, batchSize = 25) {
   return batches;
 };
 
-
-export { compareObjects, compareVersions, setObject, checkForDifferenceInObjects, splitArrayIntoBatches };
-
-module.exports = {
-};
-
 function buildComparisonBetweenTwoObjects(
   newObject: any,
   oldObject: any,
   arrayComparisonKey: any,
-  fullKey: String,
-  includedKeys: Array<String>,
-  excludedKeys: Array<String>,
-  arrayType: String | undefined,
+  fullKey?: string,
+  includedKeys?: Array<string>,
+  excludedKeys?: Array<string>,
+  arrayType?: string | undefined,
   reverse?: any
 ) {
   let comparisonToOldObject: any = { attr: {} };
@@ -119,7 +113,7 @@ function buildComparisonBetweenTwoObjects(
     if (
       includedKeys &&
       !includedKeys.some(
-        (v: String) =>
+        (v: string) =>
           newFullKey.replace(/\[\d+\]/g, "[x]") === v ||
           v.startsWith(newFullKey + ".")
       )
@@ -308,7 +302,7 @@ function addNewAttr(keyComparison: any, comparisonObject: any) {
     );
 }
 
-function setObjValue(propertyPath: String, value: any, obj: any): any {
+function setObjValue(propertyPath: string, value: any, obj: any): any {
   let properties: any = Array.isArray(propertyPath)
     ? propertyPath
     : propertyPath.split(".");
@@ -326,8 +320,10 @@ function setObjValue(propertyPath: String, value: any, obj: any): any {
   }
 }
 
-function reverseKey(key: String) {
+function reverseKey(key: string) {
   if (key === "oldValue") return "newValue";
   else if (key === "newValue") return "oldValue";
   return key;
 }
+
+export { compareObjects, compareVersions, setObject, checkForDifferenceInObjects, splitArrayIntoBatches };
