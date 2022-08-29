@@ -11,7 +11,6 @@
   "keywords": [],
   "author": "Niels van Bree",
   "license": "ISC",
-  "type": "module",
   "dependencies": {
     "aws-sdk": "^2.1195.0",
     "aws-xray-sdk": "^3.3.6",
