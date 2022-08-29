@@ -9,7 +9,7 @@ class DynamoDB {
     this.schemas = schemas;
   }
 
-  async getDynamoRecord(
+  async get(
     entity,
     listVersions,
     limit,
@@ -28,22 +28,16 @@ class DynamoDB {
 
     return this.tableInterface.getDynamoRecord(
       entity,
-      this.mapping.encodeEntity.bind(this.mapping),
-      this.mapping.decodeEntity.bind(this.mapping),
-      this.mapping.encodeAttachment.bind(this.mapping),
-      this.mapping.decodeAttachment.bind(this.mapping)
+      this.mapping,
     );
   }
 
-  async listDynamoRecords(entity, limit, exclusiveStartKey, callback) {
+  async list(entity, limit, exclusiveStartKey, callback) {
     validate(this.schemas.listEntitySchema, entity, undefined, "interface");
 
     return this.tableInterface.listDynamoRecords(
       entity,
-      this.mapping.encodeEntity.bind(this.mapping),
-      this.mapping.decodeEntity.bind(this.mapping),
-      this.mapping.encodeAttachment.bind(this.mapping),
-      this.mapping.decodeAttachment.bind(this.mapping),
+      this.mapping,
       limit,
       exclusiveStartKey,
       callback
@@ -62,17 +56,14 @@ class DynamoDB {
     return this.tableInterface.listAttachmentsForEntity(
       entityId,
       attachment,
-      this.mapping.encodeEntity.bind(this.mapping),
-      this.mapping.decodeEntity.bind(this.mapping),
-      this.mapping.encodeAttachment.bind(this.mapping),
-      this.mapping.decodeAttachment.bind(this.mapping),
+      this.mapping,
       limit,
       exclusiveStartKey,
       callback
     );
   }
 
-  async updateDynamoRecord(entity, username, callback) {
+  async update(entity, username, callback) {
     // We build the schema with requestContext's username, because that allows internal updates by other Lambdas by authorizing on the username in the schema
     const schema = j
       .object()
@@ -100,10 +91,7 @@ class DynamoDB {
 
     return this.tableInterface.updateDynamoRecord(
       entity,
-      this.mapping.encodeEntity.bind(this.mapping),
-      this.mapping.decodeEntity.bind(this.mapping),
-      this.mapping.encodeAttachment.bind(this.mapping),
-      this.mapping.decodeAttachment.bind(this.mapping),
+      this.mapping,
       username,
       callback
     );
@@ -119,13 +107,9 @@ class DynamoDB {
   
     return this.tableInterface.listAllVersionsForEntity(
       entity,
-      this.mapping.encodeEntity.bind(this.mapping),
-      this.mapping.decodeEntity.bind(this.mapping),
-      this.mapping.encodeAttachment.bind(this.mapping),
-      this.mapping.decodeAttachment.bind(this.mapping),
+      this.mapping,
       limit,
       exclusiveStartKey,
-      this.mapping.entityValues,
       versionsCallback
     );
   }

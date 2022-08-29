@@ -1,4 +1,5 @@
 {
-  "status": "failed",
-  "paymentId": "payment_1c76f84a-f5ed-4212-a70f-27ff13e88e5e"
+  "status": "open",
+  "orderId": "order_df7c7c89-18c6-4c8d-a919-a891c4ce6cb6",
+  "productId": "product_98473607-3d41-4a7e-9af1-5447bda16475"
 }

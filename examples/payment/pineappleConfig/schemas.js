@@ -29,7 +29,7 @@ const baseEntitySchemaWithoutId = j
 const updateableFieldsSchema = j
   .object()
   .keys({
-    userId: j.string().guid({ version: ["uuidv4"] }),
+    userId: j.string(),
   })
   .unknown(true);
 
