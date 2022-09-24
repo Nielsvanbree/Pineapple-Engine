@@ -1,8 +1,8 @@
 {
-  "name": "accelerator-pineapple",
+  "name": "pineapple-engine",
   "version": "1.0.0",
-  "description": "Serverless Pineapples will rule the world 1 day",
-  "main": "pineapple.js",
+  "description": "Fruitful Serverless Pineapples will rule the world 1 day",
+  "main": "dist/pineapple.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "tsc && node dist/pineapple.js",
@@ -11,6 +11,8 @@
   "keywords": [],
   "author": "Niels van Bree",
   "license": "ISC",
+  "files": ["dist/**/*"],
+  "types": "dist/pineapple.d.ts",
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.178.0",
     "@aws-sdk/lib-dynamodb": "^3.178.0",
