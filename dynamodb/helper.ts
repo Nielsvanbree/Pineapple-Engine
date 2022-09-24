@@ -25,10 +25,10 @@ const ItemShape =
 
 async function get(params: any) {
   try {
-    var dynamoResult = await documentClient.get(params).promise();
+    const dynamoResult = await documentClient.get(params).promise();
     return transformResult(dynamoResult);
   } catch (error) {
-    var options = {
+    const options = {
       service: {
         name: "DynamoDB",
         method: "get",
