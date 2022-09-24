@@ -1,6 +1,6 @@
-const Pineapple = require("../../../pineapple");
-const pineappleConfig = require("../pineappleConfig/index");
-const testEvent = require("../testEvents/get.json");
+import { Pineapple } from "../../../pineapple";
+import { pineappleConfig } from "../pineappleConfig/index";
+import testEvent from "../testEvents/get.json";
 
 const payment = new Pineapple(pineappleConfig);
 
@@ -27,7 +27,9 @@ async function getWithVersions() {
 async function get() {
   try {
     const { entity } = await payment.dynamodb.get(
-      testEvent
+      {
+        paymentId: "payment_1c76f84a-f5ed-4212-a70f-27ff13e88e5e"
+      },
     );
   
     return entity;

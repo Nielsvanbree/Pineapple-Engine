@@ -1,6 +1,6 @@
-const Pineapple = require("../../../pineapple");
-const pineappleConfig = require("../pineappleConfig/index");
-const testEvent = require("../testEvents/list.json");
+import { Pineapple } from "../../../pineapple";
+import { pineappleConfig } from "../pineappleConfig/index";
+import testEvent from "../testEvents/list.json";
 
 const payment = new Pineapple(pineappleConfig);
 
@@ -23,8 +23,8 @@ async function list() {
   }
 }
 
-list(payment).then((res) => {
-  console.log('Update succeeded', res);
+list().then((res) => {
+  console.log('List succeeded', res);
 }).catch((err) => {
-  console.log("🚀 ~ file: pineapple.js ~ line 18 ~ testje ~ err", err);
+  console.error("🚀 ~ file: list.js ~ line 18 ~ testje ~ err", err);
 });

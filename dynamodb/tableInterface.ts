@@ -1,29 +1,32 @@
-const {
+import { 
   query,
   dynamoGetPineapple,
   dynamoUpdatePineapple,
   update,
-} = require("./helper");
-const { compareVersions } = require("../helpers/utils");
-const _ = require("lodash/fp/object");
+} from "./helper";
+import { compareVersions } from "../helpers/utils";
+import { merge } from "lodash/fp";
+import { Mapping, iQueryableAttributes } from "./mapping";
 
 class TableInterface {
-  constructor(tableName) {
+  tableName: string;
+
+  constructor(tableName: string) {
     this.tableName = tableName;
   }
 
   async listAllVersionsForEntity(
-    entity,
-    mappingClassInstance,
-    Limit,
-    exclusiveStartKey,
-    versionsCallback
+    entity: any,
+    mappingClassInstance: Mapping,
+    Limit: number,
+    exclusiveStartKey: string | any,
+    versionsCallback: (versions: Array<any>, compareVersions: Function) => Array<any>
   ) {
     exclusiveStartKey = decodeExclusiveStartKey(exclusiveStartKey);
     entity.version = "";
     let attachmentName;
-    let encoder;
-    let decoder;
+    let encoder: Function;
+    let decoder: Function;
 
     [entity, encoder, decoder, attachmentName] = initAttachmentMapping(
       entity,
@@ -32,7 +35,7 @@ class TableInterface {
 
     const { pk, sk } = encoder(entity);
 
-    let params = {
+    let params: any = {
       TableName: this.tableName,
       KeyConditionExpression: "#pk = :pk AND begins_with(#sk, :sk)",
       Limit: exclusiveStartKey ? Limit : Limit + 1, // If there is no starting key, the latest version will be in this set, so to retrieve the amount of versions with this limit, we'll have to add 1
@@ -68,11 +71,11 @@ class TableInterface {
     if (latestVersion) versions.unshift(latestVersion);
     if (previousVersion) versions.unshift(previousVersion);
 
-    let response = {};
+    let response: any = {};
     if (res.lastEvaluatedKey)
       response.lastEvaluatedKey = encodeLastEvaluatedKey(res.lastEvaluatedKey);
 
-    versions.map((version) => {
+    versions.map((version: any) => {
       version = decoder(version);
       if (version.version === 0) response.entity = version;
       if (!version.entity)
@@ -83,7 +86,7 @@ class TableInterface {
     if (!response.entity)
       response.entity = await this.getSpecificVersion(pk, `${sk}0`, decoder);
 
-    versions = versions.filter((v) => v.version !== 0);
+    versions = versions.filter((v: any) => v.version !== 0);
 
     // The compareVersions compares values of a version with the previous version, which also sorts the array based on the version number
     // We have to leave out arrays inside arrays for now, because the object comparison function doesn't support it correctly yet!
@@ -101,7 +104,7 @@ class TableInterface {
 
     // We're only using the previous version for the comparison functionality, but it shouldn't be returned, because we already returned this version in the previous call
     if (previousVersion)
-      versions = versions.filter((v) => v.version !== previousVersion.version);
+      versions = versions.filter((v: any) => v.version !== previousVersion.version);
 
     if (response.entity) response.entity.versions = versions;
     if (attachmentName)
@@ -115,25 +118,23 @@ class TableInterface {
   }
 
   async listAttachmentsForEntity(
-    entityPk,
-    attachment,
-    mappingClassInstance,
-    Limit,
-    exclusiveStartKey,
-    callback
+    entityPk: string,
+    attachment: any,
+    mappingClassInstance: Mapping,
+    Limit: Number,
+    exclusiveStartKey: string | any,
+    callback: (params: any) => any
   ) {
-    const encoder = mappingClassInstance.encodeEntity.bind(mappingClassInstance);
     const decoder = mappingClassInstance.decodeEntity.bind(mappingClassInstance);
     const attachmentEncoder = mappingClassInstance.encodeAttachment.bind(mappingClassInstance);
     const attachmentDecoder = mappingClassInstance.decodeAttachment.bind(mappingClassInstance);
 
     exclusiveStartKey = decodeExclusiveStartKey(exclusiveStartKey);
-    let entityFromDynamo = getDynamoRecord(
+    let entityFromDynamo = this.getDynamoRecord(
       decoder({ pk: entityPk, version: 0 }),
-      encoder,
-      decoder
+      mappingClassInstance
     );
-    let attachmentName;
+    let attachmentName: string;
 
     [attachment, , , attachmentName] = initAttachmentMapping(
       { attachment },
@@ -141,7 +142,7 @@ class TableInterface {
     );
     attachment = attachmentEncoder(attachmentName)(attachment);
 
-    let params = {
+    let params: any = {
       TableName: this.tableName,
       IndexName: "pk-gsiSk1",
       KeyConditionExpression: "#pk = :pk AND begins_with(#gsiSk1, :gsiSk1)",
@@ -162,7 +163,7 @@ class TableInterface {
 
     const response = await query(params);
 
-    response.items = response.items.map((item) => {
+    response.items = response.items.map((item: any) => {
       return { attachmentName, ...attachmentDecoder(attachmentName)(item) };
     });
 
@@ -174,12 +175,12 @@ class TableInterface {
   }
 
   async getDynamoRecord(
-    entity,
-    mappingClassInstance
+    entity: any,
+    mappingClassInstance: Mapping
   ) {
-    let attachmentName;
-    let encoder;
-    let decoder;
+    let attachmentName: string;
+    let encoder: Function;
+    let decoder: Function;
 
     [entity, encoder, decoder, attachmentName] = initAttachmentMapping(
       entity,
@@ -200,10 +201,10 @@ class TableInterface {
   }
 
   async updateDynamoRecord(
-    entity,
-    mappingClassInstance,
-    username,
-    callback,
+    entity: any,
+    mappingClassInstance: Mapping,
+    username: string,
+    callback: (params: any) => any,
     type = "entity"
   ) {
     let attachment;
@@ -238,7 +239,7 @@ class TableInterface {
     if (attachment) {
       const attachmentName = Object.keys(attachment)[0];
       attachment[attachmentName].pk = pk;
-      attachment = updateDynamoRecord(
+      attachment = this.updateDynamoRecord(
         attachment[attachmentName],
         mappingClassInstance,
         username,
@@ -262,7 +263,7 @@ class TableInterface {
           gsiSk1Contains.length < sortKeyConstruction.gsiSk1.length)
       ) {
         let shouldGsiSk1BeUpdated;
-        sortKeyConstruction.gsiSk1.forEach((key) => {
+        sortKeyConstruction.gsiSk1.forEach((key: string) => {
           const encodedKeyName = usedMapping[key] ?? key;
           if (attributes[encodedKeyName] || newItem)
             shouldGsiSk1BeUpdated = true;
@@ -275,7 +276,7 @@ class TableInterface {
             const entity = await dynamoGetPineapple(this.tableName, pk, sk);
             if (entity) {
               let stopGsiSk1Construction = false;
-              gsiSk1Misses.forEach((missingKey) => {
+              gsiSk1Misses.forEach((missingKey: string) => {
                 if (
                   !stopGsiSk1Construction &&
                   (entity[missingKey] || attributes[missingKey])
@@ -328,7 +329,7 @@ class TableInterface {
       }
     }
 
-    let response = {};
+    let response: { attachment?: any, entity?: any } = {};
     if (attachment) response.attachment = (await attachment).entity;
     if (!entityShouldNotUpdate) response.entity = decodedRecord;
 
@@ -336,16 +337,16 @@ class TableInterface {
   }
 
   async listDynamoRecords(
-    entity,
-    mappingClassInstance,
-    Limit,
-    exclusiveStartKey,
-    callback
+    entity: any,
+    mappingClassInstance: Mapping,
+    Limit: number,
+    exclusiveStartKey: string | any,
+    callback: (params: any) => any
   ) {
     exclusiveStartKey = decodeExclusiveStartKey(exclusiveStartKey);
-    let attachmentName;
-    let encoder;
-    let decoder;
+    let attachmentName: string;
+    let encoder: Function;
+    let decoder: Function;
 
     [entity, encoder, decoder, attachmentName] = initAttachmentMapping(
       entity,
@@ -363,7 +364,7 @@ class TableInterface {
       queryableAttributes
     );
 
-    let params = {
+    let params: any = {
       TableName: this.tableName,
       IndexName: indexName,
       Limit,
@@ -397,11 +398,11 @@ class TableInterface {
     const response = await query(params);
 
     response.items = await Promise.all(
-      response.items.map(async (item) => {
+      response.items.map(async (item: any) => {
         const decoded = { ...decoder(item) };
         if (attachmentName) {
           // We're getting the entity object belonging to this attachment as well, because our goal is to list entities that have a certain attachment
-          const { entity } = await getDynamoRecord(
+          const { entity } = await this.getDynamoRecord(
             decoder(item),
             mappingClassInstance
           );
@@ -418,7 +419,7 @@ class TableInterface {
   }
 
   // We prefix the version with 0's in order for the version to be able to be queried in the correct sorting order
-  constructSkVersion(version) {
+  constructSkVersion(version: any) {
     // A length of 6 gives us up to a million versions for the same object
     const skVersionLength = 6;
     const versionLength = version.toString().length;
@@ -431,7 +432,7 @@ class TableInterface {
     return (skVersion += version.toString());
   }
 
-  async getSpecificVersion(pk, sk, decoder, exclusiveStartKey, type) {
+  async getSpecificVersion(pk: string, sk: string, decoder: Function, exclusiveStartKey?: string, type?: string) {
     exclusiveStartKey = decodeExclusiveStartKey(exclusiveStartKey);
     if (!pk || !sk || (type === "latest" && !exclusiveStartKey))
       return undefined;
@@ -445,7 +446,7 @@ class TableInterface {
   }
 }
 
-function getKeyAndIndexToUse(entityAttributes, queryableAttributes) {
+function getKeyAndIndexToUse(entityAttributes: any, queryableAttributes: iQueryableAttributes) {
   const entityAttributesArray = Object.keys(entityAttributes);
 
   for (let i = 0; i < queryableAttributes.length; i++) {
@@ -458,11 +459,11 @@ function getKeyAndIndexToUse(entityAttributes, queryableAttributes) {
 }
 
 function addFiltersToListParams(
-  params,
-  attributes,
-  keyName,
-  gsiSk1Contains,
-  decoder
+  params: any,
+  attributes: any,
+  keyName: string,
+  gsiSk1Contains: Array<string>,
+  decoder: Function
 ) {
   Object.entries(attributes).forEach(([key, value]) => {
     if (key === keyName || key === "gsiSk1" || gsiSk1Contains.includes(key))
@@ -479,8 +480,8 @@ function addFiltersToListParams(
 }
 
 function initAttachmentMapping(
-  entity,
-  mappingClassInstance
+  entity: any,
+  mappingClassInstance: Mapping
 ) {
   if (!entity.attachment)
     return [
@@ -490,25 +491,25 @@ function initAttachmentMapping(
     ];
 
   const attachmentName = Object.keys(entity.attachment)[0];
-  encoder = mappingClassInstance
+  const encoder = mappingClassInstance
     .encodeAttachment(attachmentName)
     .bind(mappingClassInstance);
-  decoder = mappingClassInstance
+  const decoder = mappingClassInstance
     .decodeAttachment(attachmentName)
     .bind(mappingClassInstance);
-  entity = _.merge(entity, entity.attachment[attachmentName]);
+  entity = merge(entity, entity.attachment[attachmentName]);
   delete entity.attachment;
 
   return [
     entity,
-    mappingClassInstance.encodeEntity.bind(mappingClassInstance),
-    mappingClassInstance.decodeEntity.bind(mappingClassInstance),
+    encoder,
+    decoder,
     attachmentName,
   ];
 }
 
-function getDecodedKeyFromAttribute(key, value, decoder) {
-  let encodedObj = {};
+function getDecodedKeyFromAttribute(key: string, value: any, decoder: Function) {
+  let encodedObj: any = {};
 
   encodedObj[key] = value;
   const decodedObj = decoder(encodedObj);
@@ -517,18 +518,18 @@ function getDecodedKeyFromAttribute(key, value, decoder) {
   return decodedKeys && decodedKeys[0] ? decodedKeys[0] : key;
 }
 
-function encodeLastEvaluatedKey(lastEvaluatedKey) {
+function encodeLastEvaluatedKey(lastEvaluatedKey: string | any) {
   if (!lastEvaluatedKey || typeof lastEvaluatedKey === "string")
     return lastEvaluatedKey;
 
   return Buffer.from(JSON.stringify(lastEvaluatedKey)).toString("base64");
 }
 
-function decodeExclusiveStartKey(exclusiveStartKey) {
+function decodeExclusiveStartKey(exclusiveStartKey: string | any) {
   if (!exclusiveStartKey || typeof exclusiveStartKey === "object")
     return exclusiveStartKey;
 
   return JSON.parse(Buffer.from(exclusiveStartKey, "base64").toString());
 }
 
-module.exports = TableInterface;
+export { TableInterface };

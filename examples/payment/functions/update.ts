@@ -1,6 +1,6 @@
-const Pineapple = require("../../../pineapple");
-const pineappleConfig = require("../pineappleConfig/index");
-const testEvent = require("../testEvents/update.json");
+import { Pineapple } from "../../../pineapple";
+import { pineappleConfig } from "../pineappleConfig/index";
+import testEvent from "../testEvents/update.json";
 
 const payment = new Pineapple(pineappleConfig);
 

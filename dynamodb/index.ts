@@ -1,20 +1,24 @@
-const TableInterface = require('./tableInterface');
-const Mapping = require("./mapping");
-const { j, validate } = require('../helpers/joi');
+import { TableInterface } from "./tableInterface";
+import { Mapping, iMappingConfig } from "./mapping";
+import { j, validate } from "../helpers/joi";
 
 class DynamoDB {
-  constructor({ tableName, entityName }, mappingConfig, schemas) {
+  mapping: Mapping;
+  tableInterface: any;
+  schemas: any;
+
+  constructor({ tableName, entityName }: { tableName: string, entityName: string }, mappingConfig: iMappingConfig, schemas: any) {
     this.mapping = new Mapping(entityName, mappingConfig);
     this.tableInterface = new TableInterface(tableName);
     this.schemas = schemas;
   }
 
   async get(
-    entity,
-    listVersions,
-    limit,
-    exclusiveStartKey,
-    versionsCallback
+    entity: any,
+    listVersions?: boolean,
+    limit?: number,
+    exclusiveStartKey?: string | any,
+    versionsCallback?: (versions: Array<any>, compareVersions: Function) => Array<any>
   ) {
     if (listVersions)
       return this.#listAllVersionsForEntity(
@@ -32,7 +36,7 @@ class DynamoDB {
     );
   }
 
-  async list(entity, limit, exclusiveStartKey, callback) {
+  async list(entity: any, limit: number, exclusiveStartKey: string | any, callback: (params: any) => any) {
     validate(this.schemas.listEntitySchema, entity, undefined, "interface");
 
     return this.tableInterface.listDynamoRecords(
@@ -45,11 +49,11 @@ class DynamoDB {
   }
 
   async listAttachmentsForEntity(
-    entityId,
-    attachment,
-    limit,
-    exclusiveStartKey,
-    callback
+    entityId: any,
+    attachment: any,
+    limit: number,
+    exclusiveStartKey: string | any,
+    callback: (params: any) => any
   ) {
     validate(this.schemas.listAttachmentsSchema, { attachment }, undefined, "interface");
 
@@ -63,7 +67,7 @@ class DynamoDB {
     );
   }
 
-  async update(entity, username, callback) {
+  async update(entity: any, username: string, callback: (params: any) => any) {
     // We build the schema with requestContext's username, because that allows internal updates by other Lambdas by authorizing on the username in the schema
     const schema = j
       .object()
@@ -98,10 +102,10 @@ class DynamoDB {
   }
 
   async #listAllVersionsForEntity(
-    { version, ...entity },
-    limit,
-    exclusiveStartKey,
-    versionsCallback
+    { version, ...entity }: any,
+    limit?: number,
+    exclusiveStartKey?: string | any,
+    versionsCallback?: (versions: Array<any>, compareVersions: Function) => Array<any>
   ) {
     validate(this.schemas.getSchema, entity, undefined, "interface");
   
@@ -115,4 +119,4 @@ class DynamoDB {
   }
 };
 
-module.exports = DynamoDB;
+export { DynamoDB };
