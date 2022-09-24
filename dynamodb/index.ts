@@ -1,4 +1,4 @@
-import { TableInterface } from "./tableInterface";
+import { TableInterface, QueryCommandInput, UpdateCommandInput } from "./tableInterface";
 import { Mapping, iMappingConfig } from "./mapping";
 import { j, validate } from "../helpers/joi";
 
@@ -14,7 +14,7 @@ class DynamoDB {
   }
 
   async get(
-    entity: any,
+    entity: Record<string, any>,
     listVersions?: boolean,
     limit?: number,
     exclusiveStartKey?: string | any,
@@ -36,7 +36,7 @@ class DynamoDB {
     );
   }
 
-  async list(entity: any, limit: number, exclusiveStartKey: string | any, callback: (params: any) => any) {
+  async list(entity: Record<string, any>, limit: number, exclusiveStartKey: string | any, callback: (params: QueryCommandInput) => QueryCommandInput) {
     validate(this.schemas.listEntitySchema, entity, undefined, "interface");
 
     return this.tableInterface.listDynamoRecords(
@@ -67,7 +67,7 @@ class DynamoDB {
     );
   }
 
-  async update(entity: any, username: string, callback: (params: any) => any) {
+  async update(entity: Record<string, any>, username: string, callback: (params: UpdateCommandInput) => UpdateCommandInput) {
     // We build the schema with requestContext's username, because that allows internal updates by other Lambdas by authorizing on the username in the schema
     const schema = j
       .object()

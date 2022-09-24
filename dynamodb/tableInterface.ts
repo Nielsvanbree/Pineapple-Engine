@@ -1,8 +1,10 @@
-import { 
+import {
   query,
   dynamoGetPineapple,
   dynamoUpdatePineapple,
   update,
+  QueryCommandInput,
+  UpdateCommandInput,
 } from "./helper";
 import { compareVersions } from "../helpers/utils";
 import { merge } from "lodash/fp";
@@ -16,11 +18,14 @@ class TableInterface {
   }
 
   async listAllVersionsForEntity(
-    entity: any,
+    entity: Record<string, any>,
     mappingClassInstance: Mapping,
     Limit: number,
     exclusiveStartKey: string | any,
-    versionsCallback: (versions: Array<any>, compareVersions: Function) => Array<any>
+    versionsCallback: (
+      versions: Array<any>,
+      compareVersions: Function
+    ) => Array<any>
   ) {
     exclusiveStartKey = decodeExclusiveStartKey(exclusiveStartKey);
     entity.version = "";
@@ -104,7 +109,9 @@ class TableInterface {
 
     // We're only using the previous version for the comparison functionality, but it shouldn't be returned, because we already returned this version in the previous call
     if (previousVersion)
-      versions = versions.filter((v: any) => v.version !== previousVersion.version);
+      versions = versions.filter(
+        (v: any) => v.version !== previousVersion.version
+      );
 
     if (response.entity) response.entity.versions = versions;
     if (attachmentName)
@@ -125,9 +132,12 @@ class TableInterface {
     exclusiveStartKey: string | any,
     callback: (params: any) => any
   ) {
-    const decoder = mappingClassInstance.decodeEntity.bind(mappingClassInstance);
-    const attachmentEncoder = mappingClassInstance.encodeAttachment.bind(mappingClassInstance);
-    const attachmentDecoder = mappingClassInstance.decodeAttachment.bind(mappingClassInstance);
+    const decoder =
+      mappingClassInstance.decodeEntity.bind(mappingClassInstance);
+    const attachmentEncoder =
+      mappingClassInstance.encodeAttachment.bind(mappingClassInstance);
+    const attachmentDecoder =
+      mappingClassInstance.decodeAttachment.bind(mappingClassInstance);
 
     exclusiveStartKey = decodeExclusiveStartKey(exclusiveStartKey);
     let entityFromDynamo = this.getDynamoRecord(
@@ -174,10 +184,7 @@ class TableInterface {
     };
   }
 
-  async getDynamoRecord(
-    entity: any,
-    mappingClassInstance: Mapping
-  ) {
+  async getDynamoRecord(entity: any, mappingClassInstance: Mapping) {
     let attachmentName: string;
     let encoder: Function;
     let decoder: Function;
@@ -204,7 +211,7 @@ class TableInterface {
     entity: any,
     mappingClassInstance: Mapping,
     username: string,
-    callback: (params: any) => any,
+    callback: (params: UpdateCommandInput) => UpdateCommandInput,
     type = "entity"
   ) {
     let attachment;
@@ -329,7 +336,7 @@ class TableInterface {
       }
     }
 
-    let response: { attachment?: any, entity?: any } = {};
+    let response: { attachment?: any; entity?: any } = {};
     if (attachment) response.attachment = (await attachment).entity;
     if (!entityShouldNotUpdate) response.entity = decodedRecord;
 
@@ -341,7 +348,7 @@ class TableInterface {
     mappingClassInstance: Mapping,
     Limit: number,
     exclusiveStartKey: string | any,
-    callback: (params: any) => any
+    callback: (params: QueryCommandInput) => QueryCommandInput
   ) {
     exclusiveStartKey = decodeExclusiveStartKey(exclusiveStartKey);
     let attachmentName: string;
@@ -432,7 +439,13 @@ class TableInterface {
     return (skVersion += version.toString());
   }
 
-  async getSpecificVersion(pk: string, sk: string, decoder: Function, exclusiveStartKey?: string, type?: string) {
+  async getSpecificVersion(
+    pk: string,
+    sk: string,
+    decoder: Function,
+    exclusiveStartKey?: string,
+    type?: string
+  ) {
     exclusiveStartKey = decodeExclusiveStartKey(exclusiveStartKey);
     if (!pk || !sk || (type === "latest" && !exclusiveStartKey))
       return undefined;
@@ -446,7 +459,10 @@ class TableInterface {
   }
 }
 
-function getKeyAndIndexToUse(entityAttributes: any, queryableAttributes: iQueryableAttributes) {
+function getKeyAndIndexToUse(
+  entityAttributes: any,
+  queryableAttributes: iQueryableAttributes
+) {
   const entityAttributesArray = Object.keys(entityAttributes);
 
   for (let i = 0; i < queryableAttributes.length; i++) {
@@ -479,10 +495,7 @@ function addFiltersToListParams(
   });
 }
 
-function initAttachmentMapping(
-  entity: any,
-  mappingClassInstance: Mapping
-) {
+function initAttachmentMapping(entity: any, mappingClassInstance: Mapping) {
   if (!entity.attachment)
     return [
       entity,
@@ -500,15 +513,14 @@ function initAttachmentMapping(
   entity = merge(entity, entity.attachment[attachmentName]);
   delete entity.attachment;
 
-  return [
-    entity,
-    encoder,
-    decoder,
-    attachmentName,
-  ];
+  return [entity, encoder, decoder, attachmentName];
 }
 
-function getDecodedKeyFromAttribute(key: string, value: any, decoder: Function) {
+function getDecodedKeyFromAttribute(
+  key: string,
+  value: any,
+  decoder: Function
+) {
   let encodedObj: any = {};
 
   encodedObj[key] = value;
@@ -532,4 +544,4 @@ function decodeExclusiveStartKey(exclusiveStartKey: string | any) {
   return JSON.parse(Buffer.from(exclusiveStartKey, "base64").toString());
 }
 
-export { TableInterface };
+export { TableInterface, QueryCommandInput, UpdateCommandInput };
