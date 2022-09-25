@@ -7,9 +7,14 @@ import {
   QueryCommandOutput,
   UpdateCommandInput,
   UpdateCommandOutput,
+  TranslateConfig,
 } from "@aws-sdk/lib-dynamodb";
 
-const marshallOptions = {
+const marshallOptions: {
+  convertEmptyValues?: boolean;
+  removeUndefinedValues?: boolean;
+  convertClassInstanceToMap?: boolean;
+} = {
   // Whether to automatically convert empty strings, blobs, and sets to `null`.
   convertEmptyValues: false, // false, by default.
   // Whether to remove undefined values while marshalling.
@@ -18,12 +23,14 @@ const marshallOptions = {
   convertClassInstanceToMap: false, // false, by default.
 };
 
-const unmarshallOptions = {
+const unmarshallOptions: {
+  wrapNumbers?: boolean;
+} = {
   // Whether to return numbers as a string instead of converting them to native JavaScript numbers.
   wrapNumbers: false, // false, by default.
 };
 
-const translateConfig = { marshallOptions, unmarshallOptions };
+const translateConfig: TranslateConfig = { marshallOptions, unmarshallOptions };
 
 const dynamoClient = new DynamoDB({ region: process.env.AWS_REGION });
 const documentClient = DynamoDBDocument.from(dynamoClient, translateConfig);
@@ -45,7 +52,11 @@ async function get(params: GetCommandInput): Promise<TransformResult> {
   }
 }
 
-async function dynamoGetPineapple(TableName: string, pk: string, sk: string) {
+async function dynamoGetPineapple(
+  TableName: string,
+  pk: string,
+  sk: string
+): Promise<Record<string, any>> {
   const params: GetCommandInput = {
     TableName,
     Key: {
@@ -190,8 +201,12 @@ function unpackStreamRecord({
   dynamodb,
 }: {
   eventName: "INSERT" | "MODIFY" | "REMOVE";
-  dynamodb: { OldImage: any; NewImage: any };
-}) {
+  dynamodb: { OldImage?: Record<string, any>; NewImage?: Record<string, any> };
+}): {
+  eventName: "INSERT" | "MODIFY" | "REMOVE";
+  oldImage?: Record<string, any>;
+  newImage?: Record<string, any>;
+} {
   const { OldImage, NewImage } = dynamodb;
   let oldImage;
   let newImage;

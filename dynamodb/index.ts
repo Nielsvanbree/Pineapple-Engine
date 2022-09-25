@@ -1,13 +1,23 @@
-import { TableInterface, QueryCommandInput, UpdateCommandInput } from "./tableInterface";
+import {
+  TableInterface,
+  QueryCommandInput,
+  UpdateCommandInput,
+} from "./tableInterface";
 import { Mapping, iMappingConfig } from "./mapping";
 import { j, validate } from "../helpers/joi";
 
 class DynamoDB {
   mapping: Mapping;
   tableInterface: any;
-  schemas: any;
+  schemas: PineappleSchemas;
 
-  constructor({ tableName, entityName }: { tableName: string, entityName: string }, mappingConfig: iMappingConfig, schemas: any) {
+  constructor(
+    { tableName, entityName }: { tableName: string; entityName: string },
+    mappingConfig: iMappingConfig,
+    schemas: PineappleSchemas
+  ) {
+    validateSchemasAreJoiSchemas(schemas);
+
     this.mapping = new Mapping(entityName, mappingConfig);
     this.tableInterface = new TableInterface(tableName);
     this.schemas = schemas;
@@ -18,7 +28,10 @@ class DynamoDB {
     listVersions?: boolean,
     limit?: number,
     exclusiveStartKey?: string | any,
-    versionsCallback?: (versions: Array<any>, compareVersions: Function) => Array<any>
+    versionsCallback?: (
+      versions: Array<any>,
+      compareVersions: Function
+    ) => Array<any>
   ) {
     if (listVersions)
       return this.#listAllVersionsForEntity(
@@ -28,15 +41,19 @@ class DynamoDB {
         versionsCallback
       );
 
+    this.#validateRequiredSchemaForFunction("getSchema");
     validate(this.schemas.getSchema, entity, undefined, "interface");
 
-    return this.tableInterface.getDynamoRecord(
-      entity,
-      this.mapping,
-    );
+    return this.tableInterface.getDynamoRecord(entity, this.mapping);
   }
 
-  async list(entity: Record<string, any>, limit: number, exclusiveStartKey: string | any, callback: (params: QueryCommandInput) => QueryCommandInput) {
+  async list(
+    entity: Record<string, any>,
+    limit: number,
+    exclusiveStartKey: string | any,
+    callback: (params: QueryCommandInput) => QueryCommandInput
+  ) {
+    this.#validateRequiredSchemaForFunction("listEntitySchema");
     validate(this.schemas.listEntitySchema, entity, undefined, "interface");
 
     return this.tableInterface.listDynamoRecords(
@@ -49,13 +66,19 @@ class DynamoDB {
   }
 
   async listAttachmentsForEntity(
-    entityId: any,
-    attachment: any,
+    entityId: string,
+    attachment: Record<string, any>,
     limit: number,
     exclusiveStartKey: string | any,
-    callback: (params: any) => any
+    callback: (params: QueryCommandInput) => QueryCommandInput
   ) {
-    validate(this.schemas.listAttachmentsSchema, { attachment }, undefined, "interface");
+    this.#validateRequiredSchemaForFunction("listAttachmentsSchema");
+    validate(
+      this.schemas.listAttachmentsSchema,
+      { attachment },
+      undefined,
+      "interface"
+    );
 
     return this.tableInterface.listAttachmentsForEntity(
       entityId,
@@ -67,7 +90,14 @@ class DynamoDB {
     );
   }
 
-  async update(entity: Record<string, any>, username: string, callback: (params: UpdateCommandInput) => UpdateCommandInput) {
+  async update(
+    entity: Record<string, any>,
+    username: string,
+    callback: (params: UpdateCommandInput) => UpdateCommandInput
+  ) {
+    this.#validateRequiredSchemaForFunction("interfaceUpdateSchema");
+    this.#validateRequiredSchemaForFunction("interfaceCreateSchema");
+
     // We build the schema with requestContext's username, because that allows internal updates by other Lambdas by authorizing on the username in the schema
     const schema = j
       .object()
@@ -79,7 +109,10 @@ class DynamoDB {
         }),
         entity: j
           .alternatives()
-          .try(this.schemas.interfaceUpdateSchema, this.schemas.interfaceCreateSchema),
+          .try(
+            this.schemas.interfaceUpdateSchema,
+            this.schemas.interfaceCreateSchema
+          ),
       })
       .unknown()
       .required();
@@ -102,13 +135,17 @@ class DynamoDB {
   }
 
   async #listAllVersionsForEntity(
-    { version, ...entity }: any,
+    { version, ...entity }: Record<string, any>,
     limit?: number,
     exclusiveStartKey?: string | any,
-    versionsCallback?: (versions: Array<any>, compareVersions: Function) => Array<any>
+    versionsCallback?: (
+      versions: Array<Record<string, any>>,
+      compareVersions: Function
+    ) => Array<any>
   ) {
+    this.#validateRequiredSchemaForFunction("getSchema");
     validate(this.schemas.getSchema, entity, undefined, "interface");
-  
+
     return this.tableInterface.listAllVersionsForEntity(
       entity,
       this.mapping,
@@ -117,6 +154,39 @@ class DynamoDB {
       versionsCallback
     );
   }
-};
+
+  #validateRequiredSchemaForFunction(requiredSchemaName: PineappleSchemaNames) {
+    if (!this.schemas[requiredSchemaName])
+      throw new Error(
+        `Required schema for this call not set in the constructor of the Pineapple entity: ${requiredSchemaName}`
+      );
+  }
+}
+
+function validateSchemasAreJoiSchemas(schemas: PineappleSchemas) {
+  const faultySchemas = Object.entries(schemas)
+    .map(([schemaName, schema]) => {
+      return !j.isSchema(schema) ? schemaName : undefined;
+    })
+    .filter((s) => s);
+  if (faultySchemas?.length > 0)
+    throw new Error(
+      `Invalid Joi schemas detected while trying to construct Pineapple entity: ${faultySchemas.join(
+        ", "
+      )}`
+    );
+}
+
+type PineappleSchemaNames =
+  | "createSchema"
+  | "updateSchema"
+  | "getSchema"
+  | "interfaceCreateSchema"
+  | "interfaceUpdateSchema"
+  | "listAttachmentsSchema"
+  | "listEntitySchema"
+  | "outputEntitySchema";
+
+type PineappleSchemas = { [key in PineappleSchemaNames]: object };
 
 export { DynamoDB };
