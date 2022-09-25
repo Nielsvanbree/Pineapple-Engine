@@ -2,13 +2,18 @@ import {
   TableInterface,
   QueryCommandInput,
   UpdateCommandInput,
+  iGetDynamoRecordResponse,
+  iListAllVersionsForEntityResponse,
+  iUpdateDynamoRecordResponse,
+  iListDynamoRecordsResponse,
+  iListAttachmentsForEntityResponse,
 } from "./tableInterface";
 import { Mapping, iMappingConfig } from "./mapping";
 import { j, validate } from "../helpers/joi";
 
 class DynamoDB {
   mapping: Mapping;
-  tableInterface: any;
+  tableInterface: TableInterface;
   schemas: PineappleSchemas;
 
   constructor(
@@ -32,7 +37,7 @@ class DynamoDB {
       versions: Array<any>,
       compareVersions: Function
     ) => Array<any>
-  ) {
+  ): Promise<iListAllVersionsForEntityResponse & iGetDynamoRecordResponse> {
     if (listVersions)
       return this.#listAllVersionsForEntity(
         entity,
@@ -52,7 +57,7 @@ class DynamoDB {
     limit: number,
     exclusiveStartKey: string | any,
     callback: (params: QueryCommandInput) => QueryCommandInput
-  ) {
+  ): Promise<iListDynamoRecordsResponse> {
     this.#validateRequiredSchemaForFunction("listEntitySchema");
     validate(this.schemas.listEntitySchema, entity, undefined, "interface");
 
@@ -71,7 +76,7 @@ class DynamoDB {
     limit: number,
     exclusiveStartKey: string | any,
     callback: (params: QueryCommandInput) => QueryCommandInput
-  ) {
+  ): Promise<iListAttachmentsForEntityResponse> {
     this.#validateRequiredSchemaForFunction("listAttachmentsSchema");
     validate(
       this.schemas.listAttachmentsSchema,
@@ -94,7 +99,7 @@ class DynamoDB {
     entity: Record<string, any>,
     username: string,
     callback: (params: UpdateCommandInput) => UpdateCommandInput
-  ) {
+  ): Promise<iUpdateDynamoRecordResponse> {
     this.#validateRequiredSchemaForFunction("interfaceUpdateSchema");
     this.#validateRequiredSchemaForFunction("interfaceCreateSchema");
 
@@ -142,7 +147,7 @@ class DynamoDB {
       versions: Array<Record<string, any>>,
       compareVersions: Function
     ) => Array<any>
-  ) {
+  ): Promise<iListAllVersionsForEntityResponse> {
     this.#validateRequiredSchemaForFunction("getSchema");
     validate(this.schemas.getSchema, entity, undefined, "interface");
 
@@ -155,7 +160,9 @@ class DynamoDB {
     );
   }
 
-  #validateRequiredSchemaForFunction(requiredSchemaName: PineappleSchemaNames) {
+  #validateRequiredSchemaForFunction(
+    requiredSchemaName: PineappleSchemaNames
+  ): void {
     if (!this.schemas[requiredSchemaName])
       throw new Error(
         `Required schema for this call not set in the constructor of the Pineapple entity: ${requiredSchemaName}`
@@ -163,7 +170,7 @@ class DynamoDB {
   }
 }
 
-function validateSchemasAreJoiSchemas(schemas: PineappleSchemas) {
+function validateSchemasAreJoiSchemas(schemas: PineappleSchemas): void {
   const faultySchemas = Object.entries(schemas)
     .map(([schemaName, schema]) => {
       return !j.isSchema(schema) ? schemaName : undefined;

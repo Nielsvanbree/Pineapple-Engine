@@ -39,7 +39,7 @@ async function get() {
   }
 }
 
-getWithVersions().then(res => {
+get().then(res => {
   console.log("🚀 ~ file: update.js ~ line 15 ~ update ~ res", res);
 }).catch(err => {
   console.error("🚀 ~ file: update.js ~ line 17 ~ update ~ err", err);
