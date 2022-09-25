@@ -1,6 +1,7 @@
 import { Pineapple } from "../../../pineapple";
 import { pineappleConfig } from "../pineappleConfig/index";
 import testEvent from "../testEvents/get.json";
+import { getSchema } from "../tsModels/index";
 
 const payment = new Pineapple(pineappleConfig);
 
@@ -26,10 +27,11 @@ async function getWithVersions() {
 
 async function get() {
   try {
+    const input: getSchema = {
+      paymentId: "payment_1c76f84a-f5ed-4212-a70f-27ff13e88e5e",
+    };
     const { entity } = await payment.dynamodb.get(
-      {
-        paymentId: "payment_1c76f84a-f5ed-4212-a70f-27ff13e88e5e"
-      },
+      input
     );
   
     return entity;
