@@ -9,7 +9,7 @@ class Mapping {
     this.mappingConfig = mappingConfig;
   }
 
-  encodeEntity(entity: any) {
+  encodeEntity(entity: Record<string, any>): iEncodedEntityResponse {
     if (!entity || typeof entity !== "object")
       throw {
         statusCode: 400,
@@ -33,18 +33,23 @@ class Mapping {
     });
   }
 
-  decodeEntity(entity: any) {
+  decodeEntity(entity: Record<string, any>): Record<string, any> {
     return decode(entity, this.mappingConfig.encodedToDecodedMapping);
   }
 
-  encodeAttachment(attachmentName: string) {
-    return (attachment: any) => {
+  encodeAttachment(
+    attachmentName: string
+  ): (attachment: Record<string, any>) => iEncodedEntityResponse {
+    return (attachment: Record<string, any>): iEncodedEntityResponse => {
       const {
         entity,
         sortKeyConstruction,
         encodedToDecodedMapping,
         queryableAttributesForAttachment,
-      } = getAttachmentMapping(attachmentName, this.mappingConfig.attachmentsMapping);
+      } = getAttachmentMapping(
+        attachmentName,
+        this.mappingConfig.attachmentsMapping
+      );
       const decodedToEncodedMapping = getReversedMapping(
         encodedToDecodedMapping
       );
@@ -62,8 +67,10 @@ class Mapping {
     };
   }
 
-  decodeAttachment(attachmentName: string) {
-    return (attachment: any) => {
+  decodeAttachment(
+    attachmentName: string
+  ): (attachment: Record<string, any>) => Record<string, any> {
+    return (attachment: Record<string, any>) => {
       const { encodedToDecodedMapping } = getAttachmentMapping(
         attachmentName,
         this.mappingConfig.attachmentsMapping
@@ -80,11 +87,11 @@ function encode({
   sortKeyConstruction,
   queryableAttributesFromEntity,
 }: {
-  entity: any,
-  entitySpecificMapping: any,
-  sortKeyConstruction: iSortKeyConstruction,
-  queryableAttributesFromEntity: iQueryableAttributes
-}) {
+  entity: Record<string, any>;
+  entitySpecificMapping: any;
+  sortKeyConstruction: iSortKeyConstruction;
+  queryableAttributesFromEntity: Array<QueryableAttributes>;
+}): iEncodedEntityResponse {
   if (!entity || typeof entity !== "object")
     throw {
       statusCode: 400,
@@ -93,7 +100,6 @@ function encode({
     };
 
   const usedMapping = {
-    ...getReversedMapping(GLOBAL_ENCODED_TO_DECODED_MAPPING),
     ...entitySpecificMapping,
   };
 
@@ -114,7 +120,10 @@ function encode({
   });
 }
 
-function decode(entity: any, entitySpecificMapping: iEncodedToDecodedMapping) {
+function decode(
+  entity: Record<string, any>,
+  entitySpecificMapping: iEncodedToDecodedMapping
+): Record<string, any> {
   if (!entity || typeof entity !== "object")
     throw {
       statusCode: 400,
@@ -122,15 +131,13 @@ function decode(entity: any, entitySpecificMapping: iEncodedToDecodedMapping) {
       message: "Malformed entity object",
     };
 
-  const usedMapping = {
-    ...GLOBAL_ENCODED_TO_DECODED_MAPPING,
-    ...entitySpecificMapping,
-  };
-
-  return decodeEntityAttributes(entity, usedMapping);
+  return decodeEntityAttributes(entity, entitySpecificMapping);
 }
 
-function getAttachmentMapping(attachmentName: string, attachmentsMapping: any) {
+function getAttachmentMapping(
+  attachmentName: string,
+  attachmentsMapping: Record<string, any>
+): Record<string, any> {
   if (!attachmentsMapping[attachmentName])
     throw {
       statusCode: 404,
@@ -141,7 +148,9 @@ function getAttachmentMapping(attachmentName: string, attachmentsMapping: any) {
   return attachmentsMapping[attachmentName];
 }
 
-function getReversedMapping(mappingToReverse: iEncodedToDecodedMapping) {
+function getReversedMapping(
+  mappingToReverse: iEncodedToDecodedMapping
+): Record<string, any> {
   const reversedMapping: any = {};
 
   Object.entries(mappingToReverse).forEach(([key, value]: [string, any]) => {
@@ -151,7 +160,10 @@ function getReversedMapping(mappingToReverse: iEncodedToDecodedMapping) {
   return reversedMapping;
 }
 
-function encodeEntityAttributes(entity: any, usedMapping: any) {
+function encodeEntityAttributes(
+  entity: Record<string, any>,
+  usedMapping: any
+): Record<string, any> {
   Object.entries(entity).map(([key, value]: [string, any]) => {
     if (usedMapping[key]) {
       entity[usedMapping[key]] = value;
@@ -162,7 +174,10 @@ function encodeEntityAttributes(entity: any, usedMapping: any) {
   return entity;
 }
 
-function decodeEntityAttributes(entity: any, usedMapping: any) {
+function decodeEntityAttributes(
+  entity: Record<string, any>,
+  usedMapping: any
+): Record<string, any> {
   Object.entries(entity).map(([key, value]) => {
     if (usedMapping[key]) {
       entity[usedMapping[key]] = value;
@@ -178,7 +193,19 @@ function decodeEntityAttributes(entity: any, usedMapping: any) {
   return entity;
 }
 
-function addSortKeysToEntity({ entity, sortKeyConstruction, usedMapping }: { entity: any, sortKeyConstruction: iSortKeyConstruction, usedMapping: any }) {
+function addSortKeysToEntity({
+  entity,
+  sortKeyConstruction,
+  usedMapping,
+}: {
+  entity: Record<string, any>;
+  sortKeyConstruction: iSortKeyConstruction;
+  usedMapping: any;
+}): {
+  entity: Record<string, any>;
+  gsiSk1Contains: Array<string>;
+  gsiSk1Misses: Array<string>;
+} {
   let gsiSk1Contains: Array<string> = [];
   let gsiSk1Misses: Array<string> = [];
 
@@ -186,7 +213,8 @@ function addSortKeysToEntity({ entity, sortKeyConstruction, usedMapping }: { ent
     let value = "";
 
     for (let i = 0; i < constructionArray.length; i++) {
-      const encodedKeyName = usedMapping[constructionArray[i]] || constructionArray[i];
+      const encodedKeyName =
+        usedMapping[constructionArray[i]] || constructionArray[i];
 
       if (i !== 0) value += "#";
       if (
@@ -212,7 +240,8 @@ function addSortKeysToEntity({ entity, sortKeyConstruction, usedMapping }: { ent
   ) {
     sortKeyConstruction.gsiSk1.forEach((key) => {
       const encodedKeyName = usedMapping[key] || key;
-      if (!gsiSk1Contains.includes(encodedKeyName)) gsiSk1Misses.push(encodedKeyName);
+      if (!gsiSk1Contains.includes(encodedKeyName))
+        gsiSk1Misses.push(encodedKeyName);
     });
   }
 
@@ -227,16 +256,16 @@ function prepEncodedEntityResponse({
   queryableAttributesFromEntity,
   usedMapping,
 }: {
-  entity: any,
-  gsiSk1Contains: Array<string>,
-  gsiSk1Misses: Array<string>,
-  sortKeyConstruction: iSortKeyConstruction,
-  queryableAttributesFromEntity: iQueryableAttributes,
-  usedMapping: any
-}) {
-  const newItem = entity.pk ? false : true;
+  entity: Record<string, any>;
+  gsiSk1Contains: Array<string>;
+  gsiSk1Misses: Array<string>;
+  sortKeyConstruction: iSortKeyConstruction;
+  queryableAttributesFromEntity: Array<QueryableAttributes>;
+  usedMapping: any;
+}): iEncodedEntityResponse {
+  const newItem: boolean = entity.pk ? false : true;
 
-  const response: any = {
+  const response: iEncodedEntityResponse = {
     pk: `${newItem ? `${entity.entity}_${uuidv4()}` : entity.pk}`,
     sk: entity.sk,
     newItem,
@@ -254,8 +283,8 @@ function prepEncodedEntityResponse({
 
   Object.entries(entity).forEach(([key, value]: [string, any]) => {
     if (value !== null && value !== undefined) {
-      if (CREATION_ATTRIBUTES.includes(key))
-        response.creationAttributes[key] = value;
+      if (CREATION_ATTRIBUTES.includes(key as CreationAttributes))
+        response.creationAttributes[key as CreationAttributes] = value;
       else if (!KEY_ATTRIBUTES.includes(key)) response.attributes[key] = value;
     }
   });
@@ -263,25 +292,44 @@ function prepEncodedEntityResponse({
   return response;
 }
 
-// Optionally add attributes names that should always be mapped to another name, such as v for version
-const GLOBAL_ENCODED_TO_DECODED_MAPPING: any = {};
-
 // These attributes are only created, never updated
-const CREATION_ATTRIBUTES: iCreationAttributes = ["version", "entity", "createdAt", "createdBy"];
+const CREATION_ATTRIBUTES: Array<CreationAttributes> = [
+  "version",
+  "entity",
+  "createdAt",
+  "createdBy",
+];
 
 // Key attributes of the base table
-const KEY_ATTRIBUTES: iKeyAttributes = ["pk", "sk"]; 
+const KEY_ATTRIBUTES: KeyAttributes = ["pk", "sk"];
 
 // Attributes that can be used to query with
 // The order of the array determines the priority of the attribute when listing
-const QUERYABLE_ATTRIBUTES: iQueryableAttributes = ["pk", "gsiPk1", "gsiPk2", "entity"];
-
+const QUERYABLE_ATTRIBUTES: Array<QueryableAttributes> = [
+  "pk",
+  "gsiPk1",
+  "gsiPk2",
+  "entity",
+];
 
 // Types and interfaces
 
-type iQueryableAttributes = Array<"pk" | "gsiPk1" | "gsiPk2" | "gsiPk3" | "entity">;
-type iCreationAttributes = ["version" | string, "entity" | string, "createdAt" | string, "createdBy" | string];
-type iKeyAttributes = ["pk" | string, "sk" | string];
+type QueryableAttributes = "pk" | "gsiPk1" | "gsiPk2" | "gsiPk3" | "entity";
+type CreationAttributes = "version" | "entity" | "createdAt" | "createdBy";
+type KeyAttributes = ["pk" | string, "sk" | string];
+
+interface iEncodedEntityResponse {
+  pk: string;
+  sk: string;
+  newItem: boolean;
+  attributes: Record<string, any>;
+  creationAttributes: { [key in CreationAttributes]?: any };
+  queryableAttributes: Array<QueryableAttributes>;
+  gsiSk1Contains: Array<string>;
+  gsiSk1Misses: Array<string>;
+  sortKeyConstruction: iSortKeyConstruction;
+  usedMapping: any;
+}
 
 interface iSortKeyConstruction {
   sk: Array<string>;
@@ -292,12 +340,12 @@ interface iEncodedToDecodedMapping {
   gsiPk1?: string;
   gsiPk2?: string;
   gsiPk3?: string;
-};
+}
 interface iMappingConfig {
   encodedToDecodedMapping: iEncodedToDecodedMapping;
   sortKeyConstruction: iSortKeyConstruction;
-  queryableAttributes: iQueryableAttributes;
+  queryableAttributes: Array<QueryableAttributes>;
   attachmentsMapping: any;
 }
 
-export { Mapping, iMappingConfig, iQueryableAttributes };
+export { Mapping, iMappingConfig, QueryableAttributes };

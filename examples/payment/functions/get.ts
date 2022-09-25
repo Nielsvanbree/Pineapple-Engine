@@ -11,9 +11,9 @@ async function getWithVersions() {
       true,
       10,
       undefined,
-      (params) => {
-        console.log("🚀 ~ file: list.js ~ line 9 ~ list ~ params", params);
-        return params;
+      (versions) => {
+        console.log("🚀 ~ file: list.js ~ line 9 ~ list ~ params", versions);
+        return versions;
       }
     );
   
@@ -39,7 +39,7 @@ async function get() {
   }
 }
 
-getWithVersions().then(res => {
+get().then(res => {
   console.log("🚀 ~ file: update.js ~ line 15 ~ update ~ res", res);
 }).catch(err => {
   console.error("🚀 ~ file: update.js ~ line 17 ~ update ~ err", err);

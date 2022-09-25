@@ -6,7 +6,7 @@ const payment = new Pineapple(pineappleConfig);
 
 async function update() {
   try {
-    const res = await payment.dynamodb.update(
+    const { entity: newPayment } = await payment.dynamodb.update(
       { ...testEvent, userId: "niels" },
       "niels",
       (params) => {
@@ -15,7 +15,7 @@ async function update() {
       }
     );
   
-    return res;
+    return newPayment;
   } catch (error) {
     console.error("🚀 ~ file: update.js ~ line 24 ~ update ~ error", error);
     throw error;

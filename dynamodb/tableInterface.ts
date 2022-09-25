@@ -1,12 +1,14 @@
-import { 
+import {
   query,
   dynamoGetPineapple,
   dynamoUpdatePineapple,
   update,
+  QueryCommandInput,
+  UpdateCommandInput,
 } from "./helper";
 import { compareVersions } from "../helpers/utils";
 import { merge } from "lodash/fp";
-import { Mapping, iQueryableAttributes } from "./mapping";
+import { Mapping, QueryableAttributes } from "./mapping";
 
 class TableInterface {
   tableName: string;
@@ -16,12 +18,15 @@ class TableInterface {
   }
 
   async listAllVersionsForEntity(
-    entity: any,
+    entity: Record<string, any>,
     mappingClassInstance: Mapping,
-    Limit: number,
-    exclusiveStartKey: string | any,
-    versionsCallback: (versions: Array<any>, compareVersions: Function) => Array<any>
-  ) {
+    Limit?: number,
+    exclusiveStartKey?: string | any,
+    versionsCallback?: (
+      versions: Array<any>,
+      compareVersions: Function
+    ) => Array<any>
+  ): Promise<iListAllVersionsForEntityResponse> {
     exclusiveStartKey = decodeExclusiveStartKey(exclusiveStartKey);
     entity.version = "";
     let attachmentName;
@@ -35,10 +40,10 @@ class TableInterface {
 
     const { pk, sk } = encoder(entity);
 
-    let params: any = {
+    let params: QueryCommandInput = {
       TableName: this.tableName,
       KeyConditionExpression: "#pk = :pk AND begins_with(#sk, :sk)",
-      Limit: exclusiveStartKey ? Limit : Limit + 1, // If there is no starting key, the latest version will be in this set, so to retrieve the amount of versions with this limit, we'll have to add 1
+      Limit: exclusiveStartKey ? Limit : (Limit as number) + 1, // If there is no starting key, the latest version will be in this set, so to retrieve the amount of versions with this limit, we'll have to add 1
       ExpressionAttributeNames: {
         "#pk": "pk",
         "#sk": "sk",
@@ -71,7 +76,7 @@ class TableInterface {
     if (latestVersion) versions.unshift(latestVersion);
     if (previousVersion) versions.unshift(previousVersion);
 
-    let response: any = {};
+    let response: iListAllVersionsForEntityResponse = {};
     if (res.lastEvaluatedKey)
       response.lastEvaluatedKey = encodeLastEvaluatedKey(res.lastEvaluatedKey);
 
@@ -104,7 +109,9 @@ class TableInterface {
 
     // We're only using the previous version for the comparison functionality, but it shouldn't be returned, because we already returned this version in the previous call
     if (previousVersion)
-      versions = versions.filter((v: any) => v.version !== previousVersion.version);
+      versions = versions.filter(
+        (v: any) => v.version !== previousVersion.version
+      );
 
     if (response.entity) response.entity.versions = versions;
     if (attachmentName)
@@ -121,13 +128,16 @@ class TableInterface {
     entityPk: string,
     attachment: any,
     mappingClassInstance: Mapping,
-    Limit: Number,
+    Limit: number,
     exclusiveStartKey: string | any,
-    callback: (params: any) => any
-  ) {
-    const decoder = mappingClassInstance.decodeEntity.bind(mappingClassInstance);
-    const attachmentEncoder = mappingClassInstance.encodeAttachment.bind(mappingClassInstance);
-    const attachmentDecoder = mappingClassInstance.decodeAttachment.bind(mappingClassInstance);
+    callback: (params: QueryCommandInput) => QueryCommandInput
+  ): Promise<iListAttachmentsForEntityResponse> {
+    const decoder =
+      mappingClassInstance.decodeEntity.bind(mappingClassInstance);
+    const attachmentEncoder =
+      mappingClassInstance.encodeAttachment.bind(mappingClassInstance);
+    const attachmentDecoder =
+      mappingClassInstance.decodeAttachment.bind(mappingClassInstance);
 
     exclusiveStartKey = decodeExclusiveStartKey(exclusiveStartKey);
     let entityFromDynamo = this.getDynamoRecord(
@@ -142,7 +152,7 @@ class TableInterface {
     );
     attachment = attachmentEncoder(attachmentName)(attachment);
 
-    let params: any = {
+    let params: QueryCommandInput = {
       TableName: this.tableName,
       IndexName: "pk-gsiSk1",
       KeyConditionExpression: "#pk = :pk AND begins_with(#gsiSk1, :gsiSk1)",
@@ -175,9 +185,9 @@ class TableInterface {
   }
 
   async getDynamoRecord(
-    entity: any,
+    entity: Record<string, any>,
     mappingClassInstance: Mapping
-  ) {
+  ): Promise<iGetDynamoRecordResponse> {
     let attachmentName: string;
     let encoder: Function;
     let decoder: Function;
@@ -201,12 +211,12 @@ class TableInterface {
   }
 
   async updateDynamoRecord(
-    entity: any,
+    entity: Record<string, any>,
     mappingClassInstance: Mapping,
     username: string,
-    callback: (params: any) => any,
+    callback: (params: UpdateCommandInput) => UpdateCommandInput,
     type = "entity"
-  ) {
+  ): Promise<iUpdateDynamoRecordResponse> {
     let attachment;
     if (entity.attachment) {
       attachment = { ...entity.attachment };
@@ -232,7 +242,7 @@ class TableInterface {
       gsiSk1Misses,
       sortKeyConstruction,
       usedMapping,
-    } = encoder(entity);
+    } = encoder(entity as Record<string, any> & string) as any; // TODO: figure out if attachments still work here and get the typing right, because according to TypeScript this isn't possible
     if (type === "attachment")
       attributes = { ...attributes, ...creationAttributes };
 
@@ -252,7 +262,7 @@ class TableInterface {
       !newItem &&
       Object.keys(attributes).length === 1 &&
       Object.keys(attributes)[0] === "gsiSk1";
-    let decodedRecord;
+    let decodedRecord: Record<string, any> | undefined;
 
     if (!entityShouldNotUpdate) {
       // We could eliminate this if we always enforce the presence of all gsiSk1 attributes in the joi schemas, but that might limit the freedom of the use of our APIs
@@ -320,7 +330,7 @@ class TableInterface {
 
       try {
         decodedRecord = decoder((await update(params)).item);
-      } catch (error) {
+      } catch (error: any) {
         console.error(
           "🚀 ~ file: tableInterface.js ~ line 151 ~ updateDynamoRecord ~ error",
           error
@@ -329,7 +339,7 @@ class TableInterface {
       }
     }
 
-    let response: { attachment?: any, entity?: any } = {};
+    let response: iUpdateDynamoRecordResponse = {};
     if (attachment) response.attachment = (await attachment).entity;
     if (!entityShouldNotUpdate) response.entity = decodedRecord;
 
@@ -337,12 +347,12 @@ class TableInterface {
   }
 
   async listDynamoRecords(
-    entity: any,
+    entity: Record<string, any>,
     mappingClassInstance: Mapping,
     Limit: number,
     exclusiveStartKey: string | any,
-    callback: (params: any) => any
-  ) {
+    callback: (params: QueryCommandInput) => QueryCommandInput
+  ): Promise<iListDynamoRecordsResponse> {
     exclusiveStartKey = decodeExclusiveStartKey(exclusiveStartKey);
     let attachmentName: string;
     let encoder: Function;
@@ -364,7 +374,7 @@ class TableInterface {
       queryableAttributes
     );
 
-    let params: any = {
+    let params: QueryCommandInput = {
       TableName: this.tableName,
       IndexName: indexName,
       Limit,
@@ -378,9 +388,12 @@ class TableInterface {
 
     const decodedKey = getDecodedKeyFromAttribute(keyName, "", decoder);
 
-    params.ExpressionAttributeNames[`#${decodedKey}`] = keyName;
-    params.ExpressionAttributeValues[`:${decodedKey}`] =
-      keyName === "entity" ? entity.entity : attributes[keyName];
+    if (params.ExpressionAttributeNames)
+      params.ExpressionAttributeNames[`#${decodedKey}`] = keyName;
+    if (params.ExpressionAttributeValues)
+      params.ExpressionAttributeValues[`:${decodedKey}`] =
+        keyName === "entity" ? entity.entity : attributes[keyName];
+
     params.KeyConditionExpression = `#${decodedKey} = :${decodedKey} AND begins_with(#gsiSk1, :gsiSk1)`;
 
     addFiltersToListParams(
@@ -419,7 +432,7 @@ class TableInterface {
   }
 
   // We prefix the version with 0's in order for the version to be able to be queried in the correct sorting order
-  constructSkVersion(version: any) {
+  constructSkVersion(version: Record<string, any>): string {
     // A length of 6 gives us up to a million versions for the same object
     const skVersionLength = 6;
     const versionLength = version.toString().length;
@@ -432,7 +445,13 @@ class TableInterface {
     return (skVersion += version.toString());
   }
 
-  async getSpecificVersion(pk: string, sk: string, decoder: Function, exclusiveStartKey?: string, type?: string) {
+  async getSpecificVersion(
+    pk: string,
+    sk: string,
+    decoder: Function,
+    exclusiveStartKey?: string,
+    type?: string
+  ): Promise<Record<string, any> | undefined> {
     exclusiveStartKey = decodeExclusiveStartKey(exclusiveStartKey);
     if (!pk || !sk || (type === "latest" && !exclusiveStartKey))
       return undefined;
@@ -446,7 +465,10 @@ class TableInterface {
   }
 }
 
-function getKeyAndIndexToUse(entityAttributes: any, queryableAttributes: iQueryableAttributes) {
+function getKeyAndIndexToUse(
+  entityAttributes: any,
+  queryableAttributes: Array<QueryableAttributes>
+): { keyName: QueryableAttributes; indexName: string } {
   const entityAttributesArray = Object.keys(entityAttributes);
 
   for (let i = 0; i < queryableAttributes.length; i++) {
@@ -459,20 +481,23 @@ function getKeyAndIndexToUse(entityAttributes: any, queryableAttributes: iQuerya
 }
 
 function addFiltersToListParams(
-  params: any,
+  params: QueryCommandInput,
   attributes: any,
   keyName: string,
   gsiSk1Contains: Array<string>,
   decoder: Function
-) {
+): void {
   Object.entries(attributes).forEach(([key, value]) => {
     if (key === keyName || key === "gsiSk1" || gsiSk1Contains.includes(key))
       return;
 
     const decodedKey = getDecodedKeyFromAttribute(key, value, decoder);
 
-    params.ExpressionAttributeNames[`#${decodedKey}`] = key;
-    params.ExpressionAttributeValues[`:${decodedKey}`] = value;
+    if (params.ExpressionAttributeNames)
+      params.ExpressionAttributeNames[`#${decodedKey}`] = key;
+    if (params.ExpressionAttributeValues)
+      params.ExpressionAttributeValues[`:${decodedKey}`] = value;
+
     params.FilterExpression = params.FilterExpression
       ? `${params.FilterExpression} AND #${decodedKey} = :${decodedKey}`
       : `#${decodedKey} = :${decodedKey}`;
@@ -480,9 +505,9 @@ function addFiltersToListParams(
 }
 
 function initAttachmentMapping(
-  entity: any,
+  entity: Record<string, any>,
   mappingClassInstance: Mapping
-) {
+): Array<any> {
   if (!entity.attachment)
     return [
       entity,
@@ -500,15 +525,14 @@ function initAttachmentMapping(
   entity = merge(entity, entity.attachment[attachmentName]);
   delete entity.attachment;
 
-  return [
-    entity,
-    encoder,
-    decoder,
-    attachmentName,
-  ];
+  return [entity, encoder, decoder, attachmentName];
 }
 
-function getDecodedKeyFromAttribute(key: string, value: any, decoder: Function) {
+function getDecodedKeyFromAttribute(
+  key: string,
+  value: any,
+  decoder: Function
+): string {
   let encodedObj: any = {};
 
   encodedObj[key] = value;
@@ -518,18 +542,53 @@ function getDecodedKeyFromAttribute(key: string, value: any, decoder: Function) 
   return decodedKeys && decodedKeys[0] ? decodedKeys[0] : key;
 }
 
-function encodeLastEvaluatedKey(lastEvaluatedKey: string | any) {
+function encodeLastEvaluatedKey(lastEvaluatedKey: string | any): string {
   if (!lastEvaluatedKey || typeof lastEvaluatedKey === "string")
     return lastEvaluatedKey;
 
   return Buffer.from(JSON.stringify(lastEvaluatedKey)).toString("base64");
 }
 
-function decodeExclusiveStartKey(exclusiveStartKey: string | any) {
+function decodeExclusiveStartKey(exclusiveStartKey: string | any): any {
   if (!exclusiveStartKey || typeof exclusiveStartKey === "object")
     return exclusiveStartKey;
 
   return JSON.parse(Buffer.from(exclusiveStartKey, "base64").toString());
 }
 
-export { TableInterface };
+interface iGetDynamoRecordResponse {
+  entity?: Record<string, any>;
+  att?: Record<string, any>;
+}
+interface iListAllVersionsForEntityResponse {
+  entity?: Record<string, any>;
+  att?: Record<string, any>;
+  lastEvaluatedKey?: string;
+}
+
+interface iUpdateDynamoRecordResponse {
+  attachment?: Record<string, any>;
+  entity?: Record<string, any>;
+}
+
+interface iListDynamoRecordsResponse {
+  items: Array<Record<string, any>>;
+  lastEvaluatedKey: string;
+}
+
+interface iListAttachmentsForEntityResponse {
+  entity?: Record<string, any>;
+  attachments: Array<Record<string, any>>;
+  lastEvaluatedKey: string;
+}
+
+export {
+  TableInterface,
+  QueryCommandInput,
+  UpdateCommandInput,
+  iListAllVersionsForEntityResponse,
+  iGetDynamoRecordResponse,
+  iUpdateDynamoRecordResponse,
+  iListDynamoRecordsResponse,
+  iListAttachmentsForEntityResponse,
+};
