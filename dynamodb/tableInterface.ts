@@ -239,7 +239,7 @@ class TableInterface {
       gsiSk1Misses,
       sortKeyConstruction,
       usedMapping,
-    } = encoder(entity);
+    } = encoder(entity) as any; // TODO: figure out if attachments still work here and get the typing right, because according to TypeScript this isn't possible
     if (type === "attachment")
       attributes = { ...attributes, ...creationAttributes };
 
