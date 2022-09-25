@@ -11,7 +11,10 @@
   "keywords": [],
   "author": "Niels van Bree",
   "license": "ISC",
-  "files": ["dist/**/*"],
+  "files": [
+    "dist/**/*",
+    "!dist/examples/**/*"
+  ],
   "types": "dist/pineapple.d.ts",
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.178.0",
