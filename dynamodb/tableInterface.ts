@@ -38,61 +38,43 @@ class TableInterface {
     let params: QueryCommandInput = {
       TableName: this.tableName,
       KeyConditionExpression: "#pk = :pk AND begins_with(#sk, :sk)",
-      Limit: exclusiveStartKey ? Limit : (Limit as number) + 1, // If there is no starting key, the latest version will be in this set, so to retrieve the amount of versions with this limit, we'll have to add 1
+      Limit,
       ExpressionAttributeNames: {
         "#pk": "pk",
         "#sk": "sk",
       },
       ExpressionAttributeValues: {
         ":pk": pk,
-        ":sk": sk,
+        ":sk": sk.replace(mappingClassInstance.entityValues.entity, `${mappingClassInstance.entityValues.entity}Version`),
       },
     };
 
     if (exclusiveStartKey) params.ExclusiveStartKey = exclusiveStartKey;
 
-    const [res, latestVersion, previousVersion] = await Promise.all([
+    const [res, latestVersion] = await Promise.all([
       query(params),
       this.getSpecificVersion(
         pk,
         `${sk}0`,
-        decoder,
-        exclusiveStartKey,
-        "latest"
-      ),
-      this.getSpecificVersion(
-        exclusiveStartKey ? exclusiveStartKey.pk : undefined,
-        exclusiveStartKey ? exclusiveStartKey.sk : undefined,
         decoder
-      ),
+      )
     ]);
     let versions = res.items;
 
-    if (latestVersion) versions.unshift(latestVersion);
-    if (previousVersion) versions.unshift(previousVersion);
-
-    let response: iListAllVersionsForEntityResponse = {};
+    let response: iListAllVersionsForEntityResponse = { entity: latestVersion };
     if (res.lastEvaluatedKey)
       response.lastEvaluatedKey = encodeLastEvaluatedKey(res.lastEvaluatedKey);
 
-    versions.map((version: any) => {
+    versions = versions.map((version: Record<string, any>) => {
       version = decoder(version);
-      if (version.version === 0) response.entity = version;
       if (!version.entity)
         version.entity = mappingClassInstance.entityValues.entity;
       return version;
     });
 
+    // Needed for attachments? If not, it can be removed
     if (!response.entity)
       response.entity = await this.getSpecificVersion(pk, `${sk}0`, decoder);
-
-    versions = versions.filter((v: any) => v.version !== 0);
-
-    // We're only using the previous version for the comparison functionality, but it shouldn't be returned, because we already returned this version in the previous call
-    if (previousVersion)
-      versions = versions.filter(
-        (v: any) => v.version !== previousVersion.version
-      );
 
     if (response.entity) response.entity.versions = versions;
     if (attachmentName)
@@ -179,10 +161,11 @@ class TableInterface {
     );
 
     let { pk, sk } = encoder(entity);
-    if (entity.version !== 0)
-      sk = sk.replace(/#v\d+/, `#v${this.constructSkVersion(entity.version)}`);
 
-    let res = await dynamoGetPineapple(this.tableName, pk, sk);
+    if (entity.version !== 0)
+      sk = sk.replace(mappingClassInstance.entityValues.entity, `${mappingClassInstance.entityValues.entity}Version`);
+
+    const res = await dynamoGetPineapple(this.tableName, pk, sk);
     if (!res) return {};
 
     return {
@@ -412,29 +395,12 @@ class TableInterface {
     };
   }
 
-  // We prefix the version with 0's in order for the version to be able to be queried in the correct sorting order
-  constructSkVersion(version: Record<string, any>): string {
-    // A length of 6 gives us up to a million versions for the same object
-    const skVersionLength = 6;
-    const versionLength = version.toString().length;
-    let skVersion = "";
-
-    for (let i = 0; i < skVersionLength - versionLength; i++) {
-      skVersion += "0";
-    }
-
-    return (skVersion += version.toString());
-  }
-
   async getSpecificVersion(
     pk: string,
     sk: string,
     decoder: Function,
-    exclusiveStartKey?: string,
-    type?: string
   ): Promise<Record<string, any> | undefined> {
-    exclusiveStartKey = decodeExclusiveStartKey(exclusiveStartKey);
-    if (!pk || !sk || (type === "latest" && !exclusiveStartKey))
+    if (!pk || !sk)
       return undefined;
 
     const version = await dynamoGetPineapple(this.tableName, pk, sk);

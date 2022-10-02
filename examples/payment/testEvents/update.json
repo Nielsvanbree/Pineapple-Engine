@@ -1,5 +1,4 @@
 {
-  "status": "open",
-  "orderId": "order_df7c7c89-18c6-4c8d-a919-a891c4ce6cb6",
-  "productId": "product_98473607-3d41-4a7e-9af1-5447bda16475"
+  "status": "expired",
+  "paymentId": "payment_a0acab74-c086-46e9-9ede-6bfab8e7e9d8"
 }

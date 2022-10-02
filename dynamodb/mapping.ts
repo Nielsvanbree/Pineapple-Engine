@@ -225,7 +225,7 @@ function addSortKeysToEntity({
 
       value +=
         encodedKeyName === "version"
-          ? `v${entity[encodedKeyName]}`
+          ? `version_${entity[encodedKeyName]}`
           : entity[encodedKeyName];
 
       if (key === "gsiSk1") gsiSk1Contains.push(encodedKeyName);
