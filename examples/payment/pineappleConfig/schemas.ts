@@ -1,6 +1,5 @@
 import { j, metaInfoSchema, prefixedUuid } from "../../../helpers/joi";
- 
-const nonNegativeInt = j.number().integer().min(0);
+import { decodeTime } from "ulid";
 
 // Base schema for the entity, but without an id so we can create an update & create schema from here.
 // This schema shouldn't contain all elements that can be created, but should only contain queryable & filterable attributes. Extend the create & update schemas with the other fields.
@@ -18,9 +17,15 @@ const baseEntitySchemaWithoutId = j
         "canceled",
         "paid"
       ),
-    productId: j.string().regex(/^product_/).custom(prefixedUuid),
-    orderId: j.string().regex(/^order_/).custom(prefixedUuid),
-    updatedBy: j.string()
+    productId: j
+      .string()
+      .regex(/^product_/)
+      .custom(prefixedUuid),
+    orderId: j
+      .string()
+      .regex(/^order_/)
+      .custom(prefixedUuid),
+    updatedBy: j.string(),
   })
   .unknown(false)
   .required();
@@ -33,7 +38,10 @@ const updateableFieldsSchema = j
   })
   .unknown(true);
 
-const entityIdSchema = j.string().regex(/^payment_/).custom(prefixedUuid);
+const entityIdSchema = j
+  .string()
+  .regex(/^payment_/)
+  .custom(prefixedUuid);
 
 // Base schema appended with the id, which is the full schema.
 const baseEntitySchemaWithId = baseEntitySchemaWithoutId.append({
@@ -42,9 +50,7 @@ const baseEntitySchemaWithId = baseEntitySchemaWithoutId.append({
 
 // Schema should be used at: input & interface.
 const createSchema = baseEntitySchemaWithoutId
-  .fork(["status", "productId", "orderId"], (schema) =>
-    schema.required()
-  )
+  .fork(["status", "productId", "orderId"], (schema) => schema.required())
   .concat(updateableFieldsSchema);
 
 // Schema should be used at: input & interface.
@@ -53,25 +59,35 @@ const updateSchema = baseEntitySchemaWithId
   .concat(updateableFieldsSchema);
 
 // Sometimes an input value should be modified by the update function, so the interface receives something different than the input Lambda
-const interfaceUpdateSchema = updateSchema
-  .fork(["paymentId"], (schema) => schema.required());
+const interfaceUpdateSchema = updateSchema.fork(["paymentId"], (schema) =>
+  schema.required()
+);
 
 // Sometimes an input value should be modified by the update function, so the interface receives something different than the input Lambda
-const interfaceCreateSchema = createSchema.fork(
-  ["userId"],
-  (schema) => schema.required()
+const interfaceCreateSchema = createSchema.fork(["userId"], (schema) =>
+  schema.required()
 );
 
 // Schema should be used at: interface.
 const getSchema = baseEntitySchemaWithId
   .fork(["paymentId"], (schema) => schema.required())
   .append({
-    version: nonNegativeInt,
+    version: [
+      j.number().valid(0),
+      j.string().custom((value) => {
+        try {
+          decodeTime(value);
+        } catch (error) {
+          throw new Error("version is not a valid ULID");
+        }
+      }),
+    ],
   });
 
 // Schema should be used at: input & interface.
-const listEntitySchema = baseEntitySchemaWithoutId
-  .fork([], (schema) => schema.required())
+const listEntitySchema = baseEntitySchemaWithoutId.fork([], (schema) =>
+  schema.required()
+);
 
 // Schema should be used at: input & interface.
 const listAttachmentsSchema = j.object().keys({});
@@ -84,7 +100,7 @@ const outputEntitySchema = createSchema
   })
   .concat(metaInfoSchema);
 
-export { 
+export {
   createSchema,
   updateSchema,
   getSchema,

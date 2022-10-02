@@ -162,7 +162,10 @@ class TableInterface {
 
     let { pk, sk } = encoder(entity);
 
-    let res = await dynamoGetPineapple(this.tableName, pk, sk);
+    if (entity.version !== 0)
+      sk = sk.replace(mappingClassInstance.entityValues.entity, `${mappingClassInstance.entityValues.entity}Version`);
+
+    const res = await dynamoGetPineapple(this.tableName, pk, sk);
     if (!res) return {};
 
     return {

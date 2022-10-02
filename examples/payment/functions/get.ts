@@ -24,7 +24,7 @@ async function get() {
   try {
     const { entity } = await payment.dynamodb.get(
       {
-        paymentId: "payment_a0acab74-c086-46e9-9ede-6bfab8e7e9d8"
+        paymentId: "payment_a0acab74-c086-46e9-9ede-6bfab8e7e9d8",
       },
     );
   
@@ -35,7 +35,7 @@ async function get() {
   }
 }
 
-getWithVersions().then(res => {
+get().then(res => {
   console.log("🚀 ~ file: update.js ~ line 15 ~ update ~ res", res);
 }).catch(err => {
   console.error("🚀 ~ file: update.js ~ line 17 ~ update ~ err", err);
