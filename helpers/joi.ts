@@ -1,4 +1,5 @@
 import * as j from "joi";
+import { isValidUlid } from "./utils";
 
 const metaInfoSchema = j.object().keys({
   version: j.number().integer().min(0).required(),
@@ -42,9 +43,9 @@ function validate(
   }
 
   return value;
-};
+}
 
-function prefixedUuid(value: any) {
+function prefixedUuid(value: string) {
   const [, uuidv4] = value.split("_");
 
   if (
@@ -55,7 +56,16 @@ function prefixedUuid(value: any) {
     throw new Error("the part after the prefix is not a valid uuidv4");
 
   return value;
-};
+}
+
+function prefixedUlid(value: string) {
+  const [, ulid] = value.split("_");
+
+  if (!isValidUlid(ulid))
+    throw new Error("the part after the prefix is not a valid ulid");
+
+  return value;
+}
 
 function retrieveAlternativesErrorMessage(error: any) {
   let fullMessage = "";
@@ -67,4 +77,4 @@ function retrieveAlternativesErrorMessage(error: any) {
   return fullMessage;
 }
 
-export { j, metaInfoSchema, validate, prefixedUuid };
+export { j, metaInfoSchema, validate, prefixedUuid, prefixedUlid };

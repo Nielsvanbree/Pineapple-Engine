@@ -17,13 +17,13 @@ class DynamoDB {
   schemas: PineappleSchemas;
 
   constructor(
-    { tableName, entityName }: { tableName: string; entityName: string },
+    { tableName, entityName, idGeneratorFunction }: { tableName: string; entityName: string; idGeneratorFunction?: () => string },
     mappingConfig: iMappingConfig,
     schemas: PineappleSchemas
   ) {
     validateSchemasAreJoiSchemas(schemas);
 
-    this.mapping = new Mapping(entityName, mappingConfig);
+    this.mapping = new Mapping(entityName, mappingConfig, idGeneratorFunction);
     this.tableInterface = new TableInterface(tableName);
     this.schemas = schemas;
   }
