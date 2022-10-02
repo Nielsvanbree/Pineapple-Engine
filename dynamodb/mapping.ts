@@ -1,12 +1,13 @@
-import { v4 as uuidv4 } from "uuid";
-
+import { ulid } from "ulid";
 class Mapping {
   entityValues: { entity: string };
-  mappingConfig: iMappingConfig;
+  #mappingConfig: iMappingConfig;
+  #idGeneratorFunction: () => string;
 
-  constructor(entityName: string, mappingConfig: iMappingConfig) {
+  constructor(entityName: string, mappingConfig: iMappingConfig, idGeneratorFunction: () => string = ulid) {
     this.entityValues = { entity: entityName };
-    this.mappingConfig = mappingConfig;
+    this.#mappingConfig = mappingConfig;
+    this.#idGeneratorFunction = idGeneratorFunction;
   }
 
   encodeEntity(entity: Record<string, any>): iEncodedEntityResponse {
@@ -22,19 +23,19 @@ class Mapping {
       entity.version = 0;
 
     const decodedToEncodedMapping = getReversedMapping(
-      this.mappingConfig.encodedToDecodedMapping
+      this.#mappingConfig.encodedToDecodedMapping
     );
 
-    return encode({
+    return this.#encode({
       entity,
       entitySpecificMapping: decodedToEncodedMapping,
-      sortKeyConstruction: this.mappingConfig.sortKeyConstruction,
-      queryableAttributesFromEntity: this.mappingConfig.queryableAttributes,
+      sortKeyConstruction: this.#mappingConfig.sortKeyConstruction,
+      queryableAttributesFromEntity: this.#mappingConfig.queryableAttributes,
     });
   }
 
   decodeEntity(entity: Record<string, any>): Record<string, any> {
-    return decode(entity, this.mappingConfig.encodedToDecodedMapping);
+    return decode(entity, this.#mappingConfig.encodedToDecodedMapping);
   }
 
   encodeAttachment(
@@ -48,7 +49,7 @@ class Mapping {
         queryableAttributesForAttachment,
       } = getAttachmentMapping(
         attachmentName,
-        this.mappingConfig.attachmentsMapping
+        this.#mappingConfig.attachmentsMapping
       );
       const decodedToEncodedMapping = getReversedMapping(
         encodedToDecodedMapping
@@ -58,7 +59,7 @@ class Mapping {
       if (attachment.version === undefined || attachment.version === null)
         attachment.version = 0;
 
-      return encode({
+      return this.#encode({
         entity: attachment,
         entitySpecificMapping: decodedToEncodedMapping,
         sortKeyConstruction,
@@ -73,51 +74,95 @@ class Mapping {
     return (attachment: Record<string, any>) => {
       const { encodedToDecodedMapping } = getAttachmentMapping(
         attachmentName,
-        this.mappingConfig.attachmentsMapping
+        this.#mappingConfig.attachmentsMapping
       );
 
       return decode(attachment, encodedToDecodedMapping);
     };
   }
-}
 
-function encode({
-  entity,
-  entitySpecificMapping,
-  sortKeyConstruction,
-  queryableAttributesFromEntity,
-}: {
-  entity: Record<string, any>;
-  entitySpecificMapping: any;
-  sortKeyConstruction: iSortKeyConstruction;
-  queryableAttributesFromEntity: Array<QueryableAttributes>;
-}): iEncodedEntityResponse {
-  if (!entity || typeof entity !== "object")
-    throw {
-      statusCode: 400,
-      code: "InvalidParameterException",
-      message: "Malformed entity object",
-    };
-
-  const usedMapping = {
-    ...entitySpecificMapping,
-  };
-
-  encodeEntityAttributes(entity, usedMapping);
-  const { gsiSk1Contains, gsiSk1Misses } = addSortKeysToEntity({
+  #encode({
     entity,
+    entitySpecificMapping,
     sortKeyConstruction,
-    usedMapping,
-  });
+    queryableAttributesFromEntity,
+  }: {
+    entity: Record<string, any>;
+    entitySpecificMapping: any;
+    sortKeyConstruction: iSortKeyConstruction;
+    queryableAttributesFromEntity: Array<QueryableAttributes>;
+  }): iEncodedEntityResponse {
+    if (!entity || typeof entity !== "object")
+      throw {
+        statusCode: 400,
+        code: "InvalidParameterException",
+        message: "Malformed entity object",
+      };
+  
+    const usedMapping = {
+      ...entitySpecificMapping,
+    };
+  
+    encodeEntityAttributes(entity, usedMapping);
+    const { gsiSk1Contains, gsiSk1Misses } = addSortKeysToEntity({
+      entity,
+      sortKeyConstruction,
+      usedMapping,
+    });
+  
+    return this.#prepEncodedEntityResponse({
+      entity,
+      gsiSk1Contains,
+      gsiSk1Misses,
+      sortKeyConstruction,
+      queryableAttributesFromEntity,
+      usedMapping,
+    });
+  }
 
-  return prepEncodedEntityResponse({
+  #prepEncodedEntityResponse({
     entity,
     gsiSk1Contains,
     gsiSk1Misses,
     sortKeyConstruction,
     queryableAttributesFromEntity,
     usedMapping,
-  });
+  }: {
+    entity: Record<string, any>;
+    gsiSk1Contains: Array<string>;
+    gsiSk1Misses: Array<string>;
+    sortKeyConstruction: iSortKeyConstruction;
+    queryableAttributesFromEntity: Array<QueryableAttributes>;
+    usedMapping: any;
+  }): iEncodedEntityResponse {
+    const newItem: boolean = entity.pk ? false : true;
+  
+    const response: iEncodedEntityResponse = {
+      pk: `${newItem ? `${entity.entity}_${this.#idGeneratorFunction()}` : entity.pk}`,
+      sk: entity.sk,
+      newItem,
+      attributes: {},
+      creationAttributes: {},
+      queryableAttributes: queryableAttributesFromEntity || QUERYABLE_ATTRIBUTES,
+      gsiSk1Contains,
+      gsiSk1Misses,
+      sortKeyConstruction,
+      usedMapping,
+    };
+  
+    delete entity.pk;
+    delete entity.sk;
+  
+    Object.entries(entity).forEach(([key, value]: [string, any]) => {
+      if (value !== null && value !== undefined) {
+        if (CREATION_ATTRIBUTES.includes(key as CreationAttributes))
+          response.creationAttributes[key as CreationAttributes] = value;
+        else if (!KEY_ATTRIBUTES.includes(key)) response.attributes[key] = value;
+      }
+    });
+  
+    return response;
+  }
 }
 
 function decode(
@@ -246,50 +291,6 @@ function addSortKeysToEntity({
   }
 
   return { entity, gsiSk1Contains, gsiSk1Misses };
-}
-
-function prepEncodedEntityResponse({
-  entity,
-  gsiSk1Contains,
-  gsiSk1Misses,
-  sortKeyConstruction,
-  queryableAttributesFromEntity,
-  usedMapping,
-}: {
-  entity: Record<string, any>;
-  gsiSk1Contains: Array<string>;
-  gsiSk1Misses: Array<string>;
-  sortKeyConstruction: iSortKeyConstruction;
-  queryableAttributesFromEntity: Array<QueryableAttributes>;
-  usedMapping: any;
-}): iEncodedEntityResponse {
-  const newItem: boolean = entity.pk ? false : true;
-
-  const response: iEncodedEntityResponse = {
-    pk: `${newItem ? `${entity.entity}_${uuidv4()}` : entity.pk}`,
-    sk: entity.sk,
-    newItem,
-    attributes: {},
-    creationAttributes: {},
-    queryableAttributes: queryableAttributesFromEntity || QUERYABLE_ATTRIBUTES,
-    gsiSk1Contains,
-    gsiSk1Misses,
-    sortKeyConstruction,
-    usedMapping,
-  };
-
-  delete entity.pk;
-  delete entity.sk;
-
-  Object.entries(entity).forEach(([key, value]: [string, any]) => {
-    if (value !== null && value !== undefined) {
-      if (CREATION_ATTRIBUTES.includes(key as CreationAttributes))
-        response.creationAttributes[key as CreationAttributes] = value;
-      else if (!KEY_ATTRIBUTES.includes(key)) response.attributes[key] = value;
-    }
-  });
-
-  return response;
 }
 
 // These attributes are only created, never updated

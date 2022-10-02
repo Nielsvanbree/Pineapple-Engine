@@ -1,5 +1,5 @@
-import { j, metaInfoSchema, prefixedUuid } from "../../../helpers/joi";
-import { decodeTime } from "ulid";
+import { j, metaInfoSchema, prefixedUlid } from "../../../helpers/joi";
+import { isValidUlid } from "../../../helpers/utils";
 
 // Base schema for the entity, but without an id so we can create an update & create schema from here.
 // This schema shouldn't contain all elements that can be created, but should only contain queryable & filterable attributes. Extend the create & update schemas with the other fields.
@@ -20,11 +20,11 @@ const baseEntitySchemaWithoutId = j
     productId: j
       .string()
       .regex(/^product_/)
-      .custom(prefixedUuid),
+      .custom(prefixedUlid),
     orderId: j
       .string()
       .regex(/^order_/)
-      .custom(prefixedUuid),
+      .custom(prefixedUlid),
     updatedBy: j.string(),
   })
   .unknown(false)
@@ -41,7 +41,7 @@ const updateableFieldsSchema = j
 const entityIdSchema = j
   .string()
   .regex(/^payment_/)
-  .custom(prefixedUuid);
+  .custom(prefixedUlid);
 
 // Base schema appended with the id, which is the full schema.
 const baseEntitySchemaWithId = baseEntitySchemaWithoutId.append({
@@ -75,11 +75,8 @@ const getSchema = baseEntitySchemaWithId
     version: [
       j.number().valid(0),
       j.string().custom((value) => {
-        try {
-          decodeTime(value);
-        } catch (error) {
+        if (!isValidUlid(value))
           throw new Error("version is not a valid ULID");
-        }
       }),
     ],
   });
