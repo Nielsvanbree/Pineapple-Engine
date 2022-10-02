@@ -6,7 +6,6 @@ import {
   QueryCommandInput,
   UpdateCommandInput,
 } from "./helper";
-import { merge } from "lodash/fp";
 import { Mapping, QueryableAttributes } from "./mapping";
 
 class TableInterface {
@@ -469,7 +468,7 @@ function initAttachmentMapping(
   const decoder = mappingClassInstance
     .decodeAttachment(attachmentName)
     .bind(mappingClassInstance);
-  entity = merge(entity, entity.attachment[attachmentName]);
+  entity = Object.assign(entity, entity.attachment[attachmentName]);
   delete entity.attachment;
 
   return [entity, encoder, decoder, attachmentName];
