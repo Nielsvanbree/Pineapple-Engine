@@ -9,7 +9,8 @@ async function getWithVersions() {
     const { entity, lastEvaluatedKey } = await payment.dynamodb.get(
       testEvent,
       true,
-      10
+      1,
+      "eyJwayI6InBheW1lbnRfYTBhY2FiNzQtYzA4Ni00NmU5LTllZGUtNmJmYWI4ZTdlOWQ4Iiwic2siOiJwYXltZW50VmVyc2lvbiN2ZXJzaW9uXzAxR0VDVlZQVE43UkhCRTJQSERQNUpQM1lQIn0="
     );
   
     return { entity, lastEvaluatedKey };
@@ -23,7 +24,7 @@ async function get() {
   try {
     const { entity } = await payment.dynamodb.get(
       {
-        paymentId: "payment_1c76f84a-f5ed-4212-a70f-27ff13e88e5e"
+        paymentId: "payment_a0acab74-c086-46e9-9ede-6bfab8e7e9d8"
       },
     );
   
