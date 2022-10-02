@@ -9,12 +9,7 @@ async function getWithVersions() {
     const { entity, lastEvaluatedKey } = await payment.dynamodb.get(
       testEvent,
       true,
-      10,
-      undefined,
-      (versions) => {
-        console.log("🚀 ~ file: list.js ~ line 9 ~ list ~ params", versions);
-        return versions;
-      }
+      10
     );
   
     return { entity, lastEvaluatedKey };
@@ -39,7 +34,7 @@ async function get() {
   }
 }
 
-get().then(res => {
+getWithVersions().then(res => {
   console.log("🚀 ~ file: update.js ~ line 15 ~ update ~ res", res);
 }).catch(err => {
   console.error("🚀 ~ file: update.js ~ line 17 ~ update ~ err", err);

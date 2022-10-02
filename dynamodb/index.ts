@@ -32,18 +32,13 @@ class DynamoDB {
     entity: Record<string, any>,
     listVersions?: boolean,
     limit?: number,
-    exclusiveStartKey?: string | any,
-    versionsCallback?: (
-      versions: Array<any>,
-      compareVersions: Function
-    ) => Array<any>
+    exclusiveStartKey?: string | any
   ): Promise<iListAllVersionsForEntityResponse & iGetDynamoRecordResponse> {
     if (listVersions)
       return this.#listAllVersionsForEntity(
         entity,
         limit,
-        exclusiveStartKey,
-        versionsCallback
+        exclusiveStartKey
       );
 
     this.#validateRequiredSchemaForFunction("getSchema");
@@ -142,11 +137,7 @@ class DynamoDB {
   async #listAllVersionsForEntity(
     { version, ...entity }: Record<string, any>,
     limit?: number,
-    exclusiveStartKey?: string | any,
-    versionsCallback?: (
-      versions: Array<Record<string, any>>,
-      compareVersions: Function
-    ) => Array<any>
+    exclusiveStartKey?: string | any
   ): Promise<iListAllVersionsForEntityResponse> {
     this.#validateRequiredSchemaForFunction("getSchema");
     validate(this.schemas.getSchema, entity, undefined, "interface");
@@ -155,8 +146,7 @@ class DynamoDB {
       entity,
       this.mapping,
       limit,
-      exclusiveStartKey,
-      versionsCallback
+      exclusiveStartKey
     );
   }
 

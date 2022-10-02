@@ -6,7 +6,6 @@ import {
   QueryCommandInput,
   UpdateCommandInput,
 } from "./helper";
-import { compareVersions } from "../helpers/utils";
 import { merge } from "lodash/fp";
 import { Mapping, QueryableAttributes } from "./mapping";
 
@@ -21,11 +20,7 @@ class TableInterface {
     entity: Record<string, any>,
     mappingClassInstance: Mapping,
     Limit?: number,
-    exclusiveStartKey?: string | any,
-    versionsCallback?: (
-      versions: Array<any>,
-      compareVersions: Function
-    ) => Array<any>
+    exclusiveStartKey?: string | any
   ): Promise<iListAllVersionsForEntityResponse> {
     exclusiveStartKey = decodeExclusiveStartKey(exclusiveStartKey);
     entity.version = "";
@@ -92,20 +87,6 @@ class TableInterface {
       response.entity = await this.getSpecificVersion(pk, `${sk}0`, decoder);
 
     versions = versions.filter((v: any) => v.version !== 0);
-
-    // The compareVersions compares values of a version with the previous version, which also sorts the array based on the version number
-    // We have to leave out arrays inside arrays for now, because the object comparison function doesn't support it correctly yet!
-    // If you want to omit this version comparison or if you need to make changes to it, use the versionsCallback
-    if (versionsCallback)
-      versions = versionsCallback(versions, compareVersions);
-    else
-      versions = compareVersions(versions, {}, [
-        "createdAt",
-        "createdBy",
-        "updatedAt",
-        "updatedBy",
-        "version",
-      ]);
 
     // We're only using the previous version for the comparison functionality, but it shouldn't be returned, because we already returned this version in the previous call
     if (previousVersion)
