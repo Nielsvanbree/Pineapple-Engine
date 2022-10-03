@@ -378,4 +378,5 @@ Now if there is another update to this payment object, the stream will create a 
   - versionNumber = 2
 
 
-
+## Future Products
+Pineapple is currently still in development and will be extended with more products in the future. The first being a CLI to easily setup a Pineapple table and add a new backend or frontend entity with TypeScript or JavaScript. The CLI will also offer some integrations with other Cloud products to store additional data or sync existing data to, such as AWS S3 or Elasticsearch.
