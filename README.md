@@ -39,7 +39,7 @@ First, think of your entity:
 - What model/schema is required?
   - We use <a href="https://www.npmjs.com/package/joi">joi</a> inside Pineapple Engine to validate your schemas.
 - What data questions do I need to ask this entity?
-  - E.g. <i>"Give me a <b>list</b> of all payments that have a <b>paid status</b> and belong to company <b><a href="https://levarne.nl/">Levarne</a></b>"</i>
+  - E.g. <i>"Give me a <b>list</b> of all payments that have a <b>paid status</b> and belong to company <b><a href="https://levarne.com/en">Levarne</a></b>"</i>
 
 Second, try to fit your entity in the Pineapple table design by looking at the supported DynamoDB single-table design patterns. We personally like to use <a href="https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/workbench.html">NoSQL Workbench</a> at this stage for playing around with a visual representation of your table design.
 
