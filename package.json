@@ -8,7 +8,14 @@
     "start": "tsc && node dist/pineapple.js",
     "build": "tsc"
   },
-  "keywords": [],
+  "keywords": [
+    "dynamodb",
+    "serverless",
+    "single-table design",
+    "table design",
+    "table interface",
+    "repository pattern"
+  ],
   "author": "Niels van Bree <niels@levarne.nl> (http://levarne.com/en)",
   "license": "ISC",
   "files": [
