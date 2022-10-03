@@ -9,7 +9,7 @@
     "build": "tsc"
   },
   "keywords": [],
-  "author": "Niels van Bree",
+  "author": "Niels van Bree <niels@levarne.nl> (http://levarne.com/en)",
   "license": "ISC",
   "files": [
     "dist/**/*",
