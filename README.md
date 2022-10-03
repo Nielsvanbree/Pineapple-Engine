@@ -4,7 +4,7 @@
 
 Pineapple is a data first product for Serverless Cloud developers. It takes general best practices surrounding data modification and data retrieval by looking at existing software architecture design patterns and best practices from the services it uses. These best practices are then turned into generic layers so those best practices become readily available to use for a wide range of applications. Instead of needing to write code for these best practices surrounding data over and over again for each application or functionality, pineapple does this for the developer, who can then put more focus on the actual business logic. The only thing a developer has to do is configure an entity by providing a simple configuration folder that will be self documenting at the same time.
 
-Pineapple exists of multiple parts. The Pineapple Engine can be used to easily retrieve and modify data and currently supports DynamoDB as its source data. The data in DynamoDB is designed according to the concept of DynamoDB's single-table design. All patterns that are supported by Pineapple are part of the Pineapple table design.
+Pineapple exists of multiple parts. The Pineapple Engine can be used to easily retrieve and modify data and currently supports DynamoDB as its source data. The data in DynamoDB is designed according to the concept of DynamoDB's single-table design. All patterns that are supported by Pineapple are part of the [Pineapple table design](#pineapple-single-table-design).
 
 <br>
 
@@ -274,6 +274,108 @@ const { entity: newPayment } = await Payment.dynamodb.update(
   }
 );
 ```
+
+## Pineapple single-table design
+We assume you're already familiar with DynamoDB's single-table design, but if not you can follow the links to the official AWS docs for more context. Now let's briefly go over some of the patterns that our Pineapple single-table design uses.
+
+### <a href="https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/bp-indexes.html">Global Secondary Indexes</a>
+The Pineapple single-table design uses a few global secondary indexes. They are as follows:
+- pk-sk (table)
+- pk-gsiSk1 (index)
+- gsiPk1-gsiSk1 (index)
+- gsiPk2-gsiSk1 (index)
+- gsiPk3-gsiSk1 (index)
+- entity-gsiSk1 (index)
+
+You can choose to leave out 1 or more indexes in your table except the <b>entity-gsiSk1 index</b> or add another index. However, if you add another index it won't be taken into account by the Pineapple Engine; you'll have to take care of that index on your own.
+
+### <a href="https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/bp-gsi-overloading.html">GSI overloading</a>
+GSI overloading, or overloading a global secondary index, basically means that you can store many entities under the same attribute names while they have a different meaning per entity. Pineapple does this through the mapping service, which you configure in the [mapping config file](#mapping-config).
+
+### <a href="https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/bp-sort-keys.html">Composite sortkey design</a>
+A composite sortkey design allows you to query on hierarchical relationships or query relationships with a low cardinality such as status or boolean flags, or you can place known attributes such as the entity name in it. For non-hierarchical setups, go from best known to low cardinality to high cardinality or most unknown, because the further away a part of your sortkey is, the harder it will be to query on it.
+<br>
+- Good example: payment#status_paid#dt_2022-10-03T20:02:17.306Z
+  - Since you most likely already work within the context of a payment API, payment can go at the beginning. Status has a low cardinality with a known set of values (e.g. paid, expired, failed, open), so if you only want to query on dt and don't care about the status, you can always construct 4 separate queries (1 for each status) and query on dt in each of them.
+- Bad example: payment#dt_2022-10-03T20:02:17.306Z#status_expired
+  - It's a bad example because status basically becomes unqueryable since you most likely don't know the exact dt in your context when querying and dt has a high cardinality, while status has a low cardinality
+
+<i><b>The sort keys inside the Pineapple single-table design are sk and gsiSk1. It uses sk only for the table itself (pk-sk) and gsiSk1 for all global secondary indexes.</i></b>
+
+### <a href="https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/bp-adjacency-graphs.html">Adjacency list design patterns</a>
+To represent many-to-many relationships you can use an adjacency list design pattern. This basically means that you could store 1 or more sub entity under the same entity object. In Pineapple terminoligy we call this an entity attachment. Although attachments are still in alpha and not recommended to use, you can build this using a regular entity as well. 
+<br><br>
+Example: our payment entity holds information like the linked order, price paid and maybe some VAT info. Now what if we also have an entity called paymentInvoice that is always linked to a payment. In this case, we want to store the paymentInvoice as an attachment under the same partition key (pk or paymentId how we called it) of the relevant payment object.
+<br>
+- Payment object:
+  - paymentId (pk) = payment_01GEFRE5TAQ62JJ5XRDJ2Z5FAX
+  - sk = payment#version_0
+- PaymentInvoice object
+  - paymentId (pk) = payment_01GEFRE5TAQ62JJ5XRDJ2Z5FAX
+  - sk = paymentInvoice#version_0
+
+### ULID versionig system
+The Pineapple single-table design stores your data using a versioning system supported by <a href="https://www.npmjs.com/package/ulid">ulid</a>. Your object always has a latest version and a list of version objects that represent your object over time, so there is always a history of each object you store in your table. The latest version of your object is marked with <b>version_0</b>. The version 0 will receive all updates through the Pineapple Engine. You will have to setup a DynamoDB stream function that generates the actual version objects for you. An example of how to achieve this can be seen below. You only have to setup this stream once per table for all entities inside that table.
+<br>
+
+We chose ulid for our versionig system because it's a unique identifief, but with an ordering of time. That means that you can list versions created between date x and y within your DynamoDB table, which would have been difficult with another setup.
+
+```javascript
+// First import ulid & your own helper functions
+const { translateStreamImage, put } = require("../_helpers/dynamodb");
+const ULID = require("ulid");
+
+// Reference to your Pineapple table
+const { TABLE_NAME } = process.env;
+
+...
+
+// Looping over your stream records and check if it's a version 0 (can also be done using DynamoDB filter patterns intead of inside your code)
+if ((record.eventName === 'INSERT' || record.eventName === 'MODIFY') && newItem.version === 0 && newItem.latestVersion !== undefined)
+    newVersion = addNewVersion(newItem);
+
+...
+
+async function addNewVersion(newItem) {
+  // Extra check to prevent a stream loop in case you made a mistake earlier!
+  if (newItem.latestVersion === 0)
+    return;
+
+  const { createdAt, createdBy, latestVersion, entity, gsiSk1, ...newVersionItemAttributes } = newItem;
+    
+  newVersionItemAttributes.version = ULID.ulid();
+  newVersionItemAttributes.sk = newVersionItemAttributes.sk.replace(/#version_0/, `#version_${newVersionItemAttributes.version}`);
+  newVersionItemAttributes.sk = newVersionItemAttributes.sk.replace(entity, `${entity}Version`);
+  newVersionItemAttributes.versionNumber = latestVersion;
+
+  const params = {
+    Item: {
+      ...newVersionItemAttributes
+    },
+    TableName: TABLE_NAME
+  };
+
+  return (await put(params)).item;
+}
+```
+
+If everyting went well, you now have an object and a version after the creation of your entity object.
+
+- Latest version of object
+  - pk = payment_01GEFRE5TAQ62JJ5XRDJ2Z5FAX
+  - sk = payment#version_0
+- First version of object 
+  - pk = payment_01GEFRE5TAQ62JJ5XRDJ2Z5FAX
+  - sk = payment#version_01GEFSWHM36ZMC3V2C8JFZV1R3
+  - Currently the exact same as version_0
+  - versionNumber = 1
+
+Now if there is another update to this payment object, the stream will create a second version:
+- Second version of object 
+  - pk = payment_01GEFRE5TAQ62JJ5XRDJ2Z5FAX
+  - sk = payment#version_01GEFT0EPKXHZE88KR7JDE0MAE
+  - Currently the exact same as version_0 (version 01GEFSWHM36ZMC3V2C8JFZV1R3 is now outdated and is still there for a history lookup if needed)
+  - versionNumber = 2
 
 
 
