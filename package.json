@@ -1,12 +1,13 @@
 {
-  "name": "pineapple-engine",
+  "name": "@levarne/pineapple-engine",
   "version": "1.0.0",
   "description": "Fruitful Serverless Pineapples will rule the world 1 day",
   "main": "dist/pineapple.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "tsc && node dist/pineapple.js",
-    "build": "tsc"
+    "build": "tsc",
+    "publish": "tsc && npm publish --access public"
   },
   "keywords": [
     "dynamodb",
@@ -34,5 +35,16 @@
     "@types/uuid": "^8.3.4",
     "ts-node": "^10.9.1",
     "typescript": "^4.8.2"
-  }
+  },
+  "directories": {
+    "example": "examples"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Nielsvanbree/Accelerator-Pineapple.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Nielsvanbree/Accelerator-Pineapple/issues"
+  },
+  "homepage": "https://github.com/Nielsvanbree/Accelerator-Pineapple#readme"
 }
