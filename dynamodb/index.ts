@@ -17,7 +17,15 @@ class DynamoDB {
   #schemas: PineappleSchemas;
 
   constructor(
-    { tableName, entityName, idGeneratorFunction }: { tableName: string; entityName: string; idGeneratorFunction?: () => string },
+    {
+      tableName,
+      entityName,
+      idGeneratorFunction,
+    }: {
+      tableName: string;
+      entityName: string;
+      idGeneratorFunction?: () => string;
+    },
     mappingConfig: iMappingConfig,
     schemas: PineappleSchemas
   ) {
@@ -30,16 +38,28 @@ class DynamoDB {
 
   async get(
     entity: Record<string, any>,
-    listVersions?: boolean,
-    limit?: number,
-    exclusiveStartKey?: string | any
+    options?: { listVersions?: boolean, limit?: number, exclusiveStartKey?: string },
   ): Promise<iListAllVersionsForEntityResponse & iGetDynamoRecordResponse> {
-    if (listVersions)
-      return this.#listAllVersionsForEntity(
-        entity,
-        limit,
-        exclusiveStartKey
-      );
+    validate(
+      j.object().keys({
+        entity: j.object().required(),
+        listVersions: j.bool().default(false),
+        limit: j.number().integer().min(1).when("listVersions", {
+          not: true,
+          then: j.forbidden(),
+        }),
+        exclusiveStartKey: j.string().when("listVersions", {
+          not: true,
+          then: j.forbidden(),
+        }),
+      }),
+      { entity, ...options },
+      undefined,
+      "interfaceInput"
+    );
+
+    if (options?.listVersions)
+      return this.#listAllVersionsForEntity(entity, options?.limit, options?.exclusiveStartKey);
 
     this.#validateRequiredSchemaForFunction("getSchema");
     validate(this.#schemas.getSchema, entity, undefined, "interface");
