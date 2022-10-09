@@ -69,18 +69,28 @@ class DynamoDB {
 
   async list(
     entity: Record<string, any>,
-    limit: number,
-    exclusiveStartKey: string | any,
-    callback: (params: QueryCommandInput) => QueryCommandInput
+    options?: { limit?: number, exclusiveStartKey?: string },
+    callback?: (params: QueryCommandInput) => QueryCommandInput
   ): Promise<iListDynamoRecordsResponse> {
     this.#validateRequiredSchemaForFunction("listEntitySchema");
+    validate(
+      j.object().keys({
+        entity: j.object().required(),
+        limit: j.number().integer().min(1),
+        exclusiveStartKey: j.string()
+      }),
+      { entity, ...options },
+      undefined,
+      "interfaceInput"
+    );
+
     validate(this.#schemas.listEntitySchema, entity, undefined, "interface");
 
     return this.#tableInterface.listDynamoRecords(
       entity,
       this.#mapping,
-      limit,
-      exclusiveStartKey,
+      options?.limit,
+      options?.exclusiveStartKey,
       callback
     );
   }

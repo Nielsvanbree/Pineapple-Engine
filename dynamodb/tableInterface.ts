@@ -312,9 +312,9 @@ class TableInterface {
   async listDynamoRecords(
     entity: Record<string, any>,
     mappingClassInstance: Mapping,
-    Limit: number,
-    exclusiveStartKey: string | any,
-    callback: (params: QueryCommandInput) => QueryCommandInput
+    Limit?: number,
+    exclusiveStartKey?: string | any,
+    callback?: (params: QueryCommandInput) => QueryCommandInput
   ): Promise<iListDynamoRecordsResponse> {
     exclusiveStartKey = decodeExclusiveStartKey(exclusiveStartKey);
     let attachmentName: string;
