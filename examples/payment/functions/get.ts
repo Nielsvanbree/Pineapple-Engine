@@ -9,6 +9,7 @@ async function getWithVersions() {
     const { entity, lastEvaluatedKey } = await payment.dynamodb.get(
       testEvent,
       {
+        listVersions: true,
         limit: 1,
         exclusiveStartKey: 'eyJwayI6InBheW1lbnRfMDFHRUNaUDg5V0ExRU44VkZFUUg1WTFOUkIiLCJzayI6InBheW1lbnRWZXJzaW9uI3ZlcnNpb25fMDFHRUNaUUJXUzhWVlBaWE5ENFNBUUVLNjkifQ=='
       }

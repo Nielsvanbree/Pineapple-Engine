@@ -177,7 +177,7 @@ class TableInterface {
     entity: Record<string, any>,
     mappingClassInstance: Mapping,
     username: string,
-    callback: (params: UpdateCommandInput) => UpdateCommandInput,
+    callback?: (params: UpdateCommandInput) => UpdateCommandInput,
     type = "entity"
   ): Promise<iUpdateDynamoRecordResponse> {
     let attachment;

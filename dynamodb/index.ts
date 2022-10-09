@@ -43,17 +43,19 @@ class DynamoDB {
     validate(
       j.object().keys({
         entity: j.object().required(),
-        listVersions: j.bool().default(false),
-        limit: j.number().integer().min(1).when("listVersions", {
-          not: true,
-          then: j.forbidden(),
-        }),
-        exclusiveStartKey: j.string().when("listVersions", {
-          not: true,
-          then: j.forbidden(),
+        options: j.object().keys({
+          listVersions: j.bool().default(false),
+          limit: j.number().integer().min(1).when("listVersions", {
+            not: true,
+            then: j.forbidden(),
+          }),
+          exclusiveStartKey: j.string().when("listVersions", {
+            not: true,
+            then: j.forbidden(),
+          }),
         }),
       }),
-      { entity, ...options },
+      { entity, options },
       undefined,
       "interfaceInput"
     );
@@ -76,10 +78,12 @@ class DynamoDB {
     validate(
       j.object().keys({
         entity: j.object().required(),
-        limit: j.number().integer().min(1),
-        exclusiveStartKey: j.string()
+        options: j.object().keys({
+          limit: j.number().integer().min(1),
+          exclusiveStartKey: j.string()
+        }),
       }),
-      { entity, ...options },
+      { entity, options },
       undefined,
       "interfaceInput"
     );
@@ -122,11 +126,22 @@ class DynamoDB {
 
   async update(
     entity: Record<string, any>,
-    username: string,
-    callback: (params: UpdateCommandInput) => UpdateCommandInput
+    options: { executorUsername: string },
+    callback?: (params: UpdateCommandInput) => UpdateCommandInput
   ): Promise<iUpdateDynamoRecordResponse> {
     this.#validateRequiredSchemaForFunction("interfaceUpdateSchema");
     this.#validateRequiredSchemaForFunction("interfaceCreateSchema");
+    validate(
+      j.object().keys({
+        entity: j.object().required(),
+        options: j.object().keys({
+          executorUsername: j.string().required()
+        }).required()
+      }),
+      { entity, options },
+      undefined,
+      "interfaceInput"
+    );
 
     // We build the schema with requestContext's username, because that allows internal updates by other Lambdas by authorizing on the username in the schema
     const schema = j
@@ -149,7 +164,7 @@ class DynamoDB {
 
     const input = {
       requestContext: {
-        authorizer: { username },
+        authorizer: { username: options.executorUsername },
       },
       entity,
     };
@@ -159,7 +174,7 @@ class DynamoDB {
     return this.#tableInterface.updateDynamoRecord(
       entity,
       this.#mapping,
-      username,
+      options.executorUsername,
       callback
     );
   }
