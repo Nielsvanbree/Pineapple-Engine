@@ -48,6 +48,8 @@ Now that you have your Pineapple table design, you can start filling in the Pine
 ### Global config
 General configuration.
 ```typescript
+// pineappleConfig/global.ts
+
 import { iGlobalConfig } from "@levarne/pineapple-engine";
 import { v4 as uuidv4 } from "uuid";
 
@@ -55,7 +57,7 @@ const globalConfig: iGlobalConfig = {
   entityName: "payment",
   dataSource: "dynamodb", // Currently the only supported source
   tableName: "fruitful-development-pineapple-provisioned", // Replace with your own table name
-  idGeneratorFunction: uuidv4 // Optional: overwrite the automatically generated id by Pineapple Enfine (we use a ULID) by your own function to generate a unique id, such as a uuid
+  idGeneratorFunction: uuidv4 // Optional: overwrite the automatically generated id by Pineapple Engine (we use a ULID) by your own function to generate a unique id, such as a uuid
 }
 
 export { globalConfig };
@@ -63,6 +65,8 @@ export { globalConfig };
 ### Mapping config
 Because the Pineapple table design uses some generic attribute names for all present keys (pk, sk, gsiPk1, gsiPk2, gsiPk3, gsiSk1) that can mean different things depending on your entity, we need a way to easily map those generic but unreadable attribute names to readable attribute names that are relevant to the entity you're working with. By filling in the mapping config according to your design, you make sure you only have to deal with readable attributes inside your function code, because Pineapple Engine takes care of the translations. Take a look at the example below for our payment entity.
 ```typescript
+// pineappleConfig/mapping.ts
+
 import { iMappingConfig } from "@levarne/pineapple-engine";
 
 const mappingConfig: iMappingConfig = {
@@ -88,6 +92,8 @@ export { mappingConfig };
 ### Schemas
 Schemas to validate your entity at certain points within your application. The interface schemas are used inside Pineapple Engine to validate your entity before sending your request to the table interface. These are mandatory to use inside Pineapple Engine to ensure nothing malformed is being send and better error messages can be displayed to you as a developer. Set them up carefully and take the table design into account when thinking of required fields or fields that cannot go with or without each other. The usage of other schemas than the interface schemas is up to you how to use within your Serverless setup and are here just as an example. You are also free to setup your joi schemas the way you like.
 ```typescript
+// pineappleConfig/schemas.ts
+
 import { j, metaInfoSchema, prefixedUlid } from "../../../helpers/joi";
 import { isValidUlid } from "../../../helpers/utils";
 
@@ -202,7 +208,8 @@ export {
 ### Grouping configs together
 To group all config files together, use an index.ts file. This grouped configuarion can then be used to initialize your Pineapple Engine Entity.
 ```typescript
-// index.ts
+// pineappleConfig/index.ts
+
 import { globalConfig } from "./global";
 import { mappingConfig } from "./mapping";
 import * as schemas from "./schemas";
