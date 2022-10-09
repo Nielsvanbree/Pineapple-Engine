@@ -42,7 +42,10 @@ class DynamoDB {
       }),
       { global: { tableName, entityName, idGeneratorFunction }, mappingConfig, schemas },
       undefined,
-      "pineappleInitialization"
+      "pineappleInitialization",
+      () => {
+        return "Something went wrong when initializing your Pineapple class. Please check your input.";
+      }
     );
 
     this.#mapping = new Mapping(entityName, mappingConfig, idGeneratorFunction);
@@ -71,7 +74,10 @@ class DynamoDB {
       }),
       { entity, options },
       undefined,
-      "interfaceInput"
+      "interfaceInput",
+      () => {
+        return "Your input in the get requested doesn't conform the schema. Please check your input.";
+      }
     );
 
     if (options?.listVersions)
@@ -99,7 +105,10 @@ class DynamoDB {
       }),
       { entity, options },
       undefined,
-      "interfaceInput"
+      "interfaceInput",
+      () => {
+        return "Your input in the list requested doesn't conform the schema. Please check your input.";
+      }
     );
 
     validate(this.#schemas.listEntitySchema, entity, undefined, "interface");
@@ -154,7 +163,10 @@ class DynamoDB {
       }),
       { entity, options },
       undefined,
-      "interfaceInput"
+      "interfaceInput",
+      () => {
+        return "Your input in the update requested doesn't conform the schema. Please check your input.";
+      }
     );
 
     // We build the schema with requestContext's username, because that allows internal updates by other Lambdas by authorizing on the username in the schema

@@ -19,8 +19,8 @@ const metaInfoSchema = j.object().keys({
 });
 
 function validate(
-  schema: any,
-  event: any,
+  schema: j.ObjectSchema,
+  event: Record<string, any>,
   options = {},
   validatedAt = "input",
   formatValidationError?: (error: any) => string
