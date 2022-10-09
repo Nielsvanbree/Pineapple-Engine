@@ -8,6 +8,8 @@ import {
   UpdateCommandInput,
   UpdateCommandOutput,
   TranslateConfig,
+  PutCommandInput,
+  PutCommandOutput,
 } from "@aws-sdk/lib-dynamodb";
 
 const marshallOptions: {
@@ -87,6 +89,26 @@ async function update(params: UpdateCommandInput): Promise<TransformResult> {
         method: "update",
         params: params,
       },
+    };
+
+    console.log(JSON.stringify(options, null, 2));
+    throw error;
+  }
+}
+
+async function put(params: PutCommandInput) {
+  try {
+    const dynamoResult: PutCommandOutput = await documentClient.put(
+      params
+    );
+    return transformResult(dynamoResult);
+  } catch (error) {
+    const options = {
+      service: {
+        name: 'DynamoDB',
+        method: 'put',
+        params: params
+      }
     };
 
     console.log(JSON.stringify(options, null, 2));
@@ -266,6 +288,7 @@ export {
   get,
   dynamoGetPineapple,
   update,
+  put,
   dynamoUpdatePineapple,
   query,
   unpackStreamRecord,

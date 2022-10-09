@@ -3,16 +3,40 @@ import {
   dynamoGetPineapple,
   dynamoUpdatePineapple,
   update,
+  put,
   QueryCommandInput,
   UpdateCommandInput,
 } from "./helper";
 import { Mapping, QueryableAttributes } from "./mapping";
+import { ulid } from "ulid";
 
 class TableInterface {
   tableName: string;
 
   constructor(tableName: string) {
     this.tableName = tableName;
+  }
+
+  async addNewVersion(newItem: Record<string, any>) {
+    // Prevents a stream loop!
+    if (newItem.latestVersion === 0)
+      return;
+  
+    const { createdAt, createdBy, latestVersion, entity, gsiSk1, ...newVersionItemAttributes } = newItem;
+      
+    newVersionItemAttributes.version = ulid();
+    newVersionItemAttributes.sk = newVersionItemAttributes.sk.replace(/#version_0/, `#version_${newVersionItemAttributes.version}`);
+    newVersionItemAttributes.sk = newVersionItemAttributes.sk.replace(entity, `${entity}Version`);
+    newVersionItemAttributes.versionNumber = latestVersion;
+  
+    const params = {
+      Item: {
+        ...newVersionItemAttributes
+      },
+      TableName: this.tableName
+    };
+  
+    return (await put(params)).item;
   }
 
   async listAllVersionsForEntity(
