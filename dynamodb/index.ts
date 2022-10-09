@@ -243,6 +243,6 @@ type PineappleSchemaNames =
   | "listEntitySchema"
   | "outputEntitySchema";
 
-type PineappleSchemas = { [key in PineappleSchemaNames]: object };
+type PineappleSchemas = { [key in PineappleSchemaNames]: j.ObjectSchema };
 
 export { DynamoDB };
