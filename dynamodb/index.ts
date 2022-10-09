@@ -30,6 +30,20 @@ class DynamoDB {
     schemas: PineappleSchemas
   ) {
     validateSchemasAreJoiSchemas(schemas);
+    validate(
+      j.object().keys({
+        global: j.object().keys({
+          tableName: j.string().required(),
+          entityName: j.string().required(),
+          idGeneratorFunction: j.func()
+        }).required(),
+        mappingConfig: j.object().required(),
+        schemas: j.object().required()
+      }),
+      { global: { tableName, entityName, idGeneratorFunction }, mappingConfig, schemas },
+      undefined,
+      "pineappleInitialization"
+    );
 
     this.#mapping = new Mapping(entityName, mappingConfig, idGeneratorFunction);
     this.#tableInterface = new TableInterface(tableName);
