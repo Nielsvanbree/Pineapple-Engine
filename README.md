@@ -288,8 +288,7 @@ Pineapple Engine supports a few utils that are relevant to building with Pineapp
 ```typescript 
 // Check if a value is a valid ulid, handy in your joi schemas for example
 isValidUlid(value: string) => boolean
-```
-```typescript 
+
 // Adds a new version for an object; use this inside a dynamo stream event when an INSERT or MODIFY event has taken place
 // For an example look at the versioning section below
 addNewVersion(
@@ -405,7 +404,6 @@ We chose ulid for our versionig system because it's a unique identifier, but wit
 // First import ulid & your own helper functions
 const { translateStreamImage } = require("../_helpers/dynamodb");
 const { pineappleUtils } = require("@levarne/pineapple-engine");
-const ULID = require("ulid");
 
 // Reference to your Pineapple table
 const { TABLE_NAME } = process.env;
