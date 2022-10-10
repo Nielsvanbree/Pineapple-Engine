@@ -1,6 +1,5 @@
-import { pineappleJoi, pineappleUtils } from "../../../pineapple";
-
-const { j, metaInfoSchema, prefixedUlid } = pineappleJoi;
+import { j, metaInfoSchema, prefixedUlid } from "../../../helpers/joi";
+import { isValidUlid } from "../../../helpers/utils";
 
 // Base schema for the entity, but without an id so we can create an update & create schema from here.
 // This schema shouldn't contain all elements that can be created, but should only contain queryable & filterable attributes. Extend the create & update schemas with the other fields.
@@ -76,7 +75,7 @@ const getSchema = baseEntitySchemaWithId
     version: [
       j.number().valid(0),
       j.string().custom((value) => {
-        if (!pineappleUtils.isValidUlid(value))
+        if (!isValidUlid(value))
           throw new Error("version is not a valid ULID");
       }),
     ],

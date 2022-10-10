@@ -1,4 +1,4 @@
-import { pineappleUtils } from "../../../pineapple";
+import { addNewVersion } from "../../../helpers/utils";
 import { Records } from "../testEvents/dynamoStream.json";
 
 const TABLE_NAME = "fruitful-development-pineapple-prov"; // Replace with your table name, e.g. through environment variables
@@ -32,7 +32,7 @@ async function processRecord(record: Record<string, any>) {
 
   let newVersion;
   if ((record.eventName === 'INSERT' || record.eventName === 'MODIFY'))
-    newVersion = await pineappleUtils.addNewVersion(newItem, { tableName: TABLE_NAME });
+    newVersion = await addNewVersion(newItem, { tableName: TABLE_NAME });
 
   return newVersion;
 }

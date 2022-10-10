@@ -6,7 +6,7 @@ import {
   put,
   QueryCommandInput,
   UpdateCommandInput,
-} from "./helper";
+} from "../helpers/dynamodb";
 import { Mapping, QueryableAttributes } from "./mapping";
 import { ulid } from "ulid";
 

@@ -1,7 +1,5 @@
 import { DynamoDB } from "./dynamodb/index";
 import { iMappingConfig } from "./dynamodb/mapping";
-import * as pineappleUtils from "./helpers/utils";
-import * as pineappleJoi from "./helpers/joi";
 
 class Pineapple {
   #dynamodb: DynamoDB;
@@ -40,6 +38,4 @@ export {
   Pineapple,
   iMappingConfig,
   iGlobalConfig,
-  pineappleUtils,
-  pineappleJoi,
 };
