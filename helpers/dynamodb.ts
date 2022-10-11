@@ -11,6 +11,7 @@ import {
   PutCommandInput,
   PutCommandOutput,
 } from "@aws-sdk/lib-dynamodb";
+import { unmarshall } from "@aws-sdk/util-dynamodb";
 
 const marshallOptions: {
   convertEmptyValues?: boolean;
@@ -239,9 +240,8 @@ function unpackStreamRecord({
   return { eventName, oldImage, newImage };
 }
 
-function translateStreamImage(image: any) {
-  return image;
-  // return dynamodbTranslator.translateOutput(image, ItemShape);
+function translateStreamImage(image: Record<string, any>) {
+  return unmarshall(image, unmarshallOptions);
 }
 
 // Function to strip the DynamoDB object from things like createdAt & createdBy
