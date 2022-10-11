@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Dynamodb exports <i>get, dynamoGetPineapple, update, put, dynamoUpdatePineapple, query, unpackStreamRecord, translateStreamImage, stripDynamoObject, QueryCommandInput, UpdateCommandInput</i>
 - Updated readme with all changes and additions
 - Added joi as a peer dependency
+- Added translateStreamImage to unmarshall a DynamoDB object into a JavaScript object from inside your DynamoDB stream function
 
 ### Changed
 - Changed the individual function parameters for an options object for the get, list and update functions. <b>This is a breaking change!</b> From now on these functions will be easier to maintain backwards compatibility when changes are made. It's also more readable when you write your code.

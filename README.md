@@ -407,14 +407,23 @@ The Pineapple single-table design stores your data using a versioning system sup
 We chose ulid for our versionig system because it's a unique identifier, but with an ordering of time. That means that you can list versions created between date x and y within your DynamoDB table, which would have been difficult with another setup.
 
 ```javascript
-// First import the Pineapple util addNewVersion & your own or Pineapple's DynamoDB helper functions for example
-const { translateStreamImage } = require("../_helpers/dynamodb");
+// First import the Pineapple translateStreamImage & addNewVersion functions
+const { translateStreamImage } = require("@levarne/pineapple-engine/helpers/dynamodb");
 const { addNewVersion } = require("@levarne/pineapple-engine/helpers/utils");
 
 // Reference to your Pineapple table
 const { TABLE_NAME } = process.env;
 
 ...
+
+if (record.dynamodb.OldImage)
+  record.dynamodb.OldImage = translateStreamImage(record.dynamodb.OldImage);
+
+if (record.dynamodb.NewImage)
+  record.dynamodb.NewImage = translateStreamImage(record.dynamodb.NewImage);
+
+const newItem = record.dynamodb.NewImage;
+const oldItem = record.dynamodb.OldImage;
 
 // Looping over your stream records and check if it's an INSERT or MODIFY event 
 // The Pineapple addNewVersion function will check if it's a version 0 and has a latestVersion of at least 1 
