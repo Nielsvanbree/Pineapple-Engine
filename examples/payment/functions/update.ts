@@ -8,7 +8,7 @@ async function update() {
   try {
     const { entity: newPayment } = await payment.dynamodb.update(
       { ...testEvent, userId: "niels" },
-      "niels",
+      { executorUsername: "Niels" },
       (params) => {
         console.log("params", params);
         return params;

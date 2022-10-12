@@ -3,16 +3,40 @@ import {
   dynamoGetPineapple,
   dynamoUpdatePineapple,
   update,
+  put,
   QueryCommandInput,
   UpdateCommandInput,
-} from "./helper";
+} from "../helpers/dynamodb";
 import { Mapping, QueryableAttributes } from "./mapping";
+import { ulid } from "ulid";
 
 class TableInterface {
   tableName: string;
 
   constructor(tableName: string) {
     this.tableName = tableName;
+  }
+
+  async addNewVersion(newItem: Record<string, any>) {
+    // Prevents a stream loop!
+    if (newItem.latestVersion === 0)
+      return;
+  
+    const { createdAt, createdBy, latestVersion, entity, gsiSk1, ...newVersionItemAttributes } = newItem;
+      
+    newVersionItemAttributes.version = ulid();
+    newVersionItemAttributes.sk = newVersionItemAttributes.sk.replace(/#version_0/, `#version_${newVersionItemAttributes.version}`);
+    newVersionItemAttributes.sk = newVersionItemAttributes.sk.replace(entity, `${entity}Version`);
+    newVersionItemAttributes.versionNumber = latestVersion;
+  
+    const params = {
+      Item: {
+        ...newVersionItemAttributes
+      },
+      TableName: this.tableName
+    };
+  
+    return (await put(params)).item;
   }
 
   async listAllVersionsForEntity(
@@ -177,7 +201,7 @@ class TableInterface {
     entity: Record<string, any>,
     mappingClassInstance: Mapping,
     username: string,
-    callback: (params: UpdateCommandInput) => UpdateCommandInput,
+    callback?: (params: UpdateCommandInput) => UpdateCommandInput,
     type = "entity"
   ): Promise<iUpdateDynamoRecordResponse> {
     let attachment;
@@ -312,9 +336,9 @@ class TableInterface {
   async listDynamoRecords(
     entity: Record<string, any>,
     mappingClassInstance: Mapping,
-    Limit: number,
-    exclusiveStartKey: string | any,
-    callback: (params: QueryCommandInput) => QueryCommandInput
+    Limit?: number,
+    exclusiveStartKey?: string | any,
+    callback?: (params: QueryCommandInput) => QueryCommandInput
   ): Promise<iListDynamoRecordsResponse> {
     exclusiveStartKey = decodeExclusiveStartKey(exclusiveStartKey);
     let attachmentName: string;
