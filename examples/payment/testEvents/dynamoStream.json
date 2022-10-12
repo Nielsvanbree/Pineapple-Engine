@@ -1,0 +1,70 @@
+{
+  "Records": [
+      {
+          "eventID": "3817bf80d2ce35146251ae8c8acecbf6",
+          "eventName": "INSERT",
+          "eventVersion": "1.1",
+          "eventSource": "aws:dynamodb",
+          "awsRegion": "eu-west-1",
+          "dynamodb": {
+              "ApproximateCreationDateTime": 1664729942,
+              "Keys": {
+                  "sk": {
+                      "S": "payment#version_0"
+                  },
+                  "pk": {
+                      "S": "payment_7e865164-b175-42df-a902-928925f71c4d"
+                  }
+              },
+              "NewImage": {
+                  "updatedBy": {
+                      "S": "niels"
+                  },
+                  "userId": {
+                      "S": "niels"
+                  },
+                  "version": {
+                      "N": "0"
+                  },
+                  "createdAt": {
+                      "S": "2022-10-02T16:59:01.741Z"
+                  },
+                  "gsiPk1": {
+                      "S": "order_df7c7c89-18c6-4c8d-a919-a891c4ce6cb6"
+                  },
+                  "gsiPk2": {
+                      "S": "product_98473607-3d41-4a7e-9af1-5447bda16475"
+                  },
+                  "gsiSk1": {
+                      "S": "payment#product_98473607-3d41-4a7e-9af1-5447bda16475#open"
+                  },
+                  "createdBy": {
+                      "S": "niels"
+                  },
+                  "latestVersion": {
+                      "N": "1"
+                  },
+                  "sk": {
+                      "S": "payment#version_0"
+                  },
+                  "pk": {
+                      "S": "payment_7e865164-b175-42df-a902-928925f71c4d"
+                  },
+                  "entity": {
+                      "S": "payment"
+                  },
+                  "status": {
+                      "S": "open"
+                  },
+                  "updatedAt": {
+                      "S": "2022-10-02T16:59:01.741Z"
+                  }
+              },
+              "SequenceNumber": "100000000019838730463",
+              "SizeBytes": 442,
+              "StreamViewType": "NEW_AND_OLD_IMAGES"
+          },
+          "eventSourceARN": "arn:aws:dynamodb:eu-west-1:029196938433:table/fruitful-development-pineapple-prov/stream/2022-10-02T16:51:10.796"
+      }
+  ]
+}

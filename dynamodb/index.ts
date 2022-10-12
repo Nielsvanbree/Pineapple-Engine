@@ -17,11 +17,36 @@ class DynamoDB {
   #schemas: PineappleSchemas;
 
   constructor(
-    { tableName, entityName, idGeneratorFunction }: { tableName: string; entityName: string; idGeneratorFunction?: () => string },
+    {
+      tableName,
+      entityName,
+      idGeneratorFunction,
+    }: {
+      tableName: string;
+      entityName: string;
+      idGeneratorFunction?: () => string;
+    },
     mappingConfig: iMappingConfig,
     schemas: PineappleSchemas
   ) {
     validateSchemasAreJoiSchemas(schemas);
+    validate(
+      j.object().keys({
+        global: j.object().keys({
+          tableName: j.string().required(),
+          entityName: j.string().required(),
+          idGeneratorFunction: j.func()
+        }).required(),
+        mappingConfig: j.object().required(),
+        schemas: j.object().required()
+      }),
+      { global: { tableName, entityName, idGeneratorFunction }, mappingConfig, schemas },
+      undefined,
+      "pineappleInitialization",
+      () => {
+        return "Something went wrong when initializing your Pineapple class. Please check your input.";
+      }
+    );
 
     this.#mapping = new Mapping(entityName, mappingConfig, idGeneratorFunction);
     this.#tableInterface = new TableInterface(tableName);
@@ -30,16 +55,33 @@ class DynamoDB {
 
   async get(
     entity: Record<string, any>,
-    listVersions?: boolean,
-    limit?: number,
-    exclusiveStartKey?: string | any
+    options?: { listVersions?: boolean, limit?: number, exclusiveStartKey?: string },
   ): Promise<iListAllVersionsForEntityResponse & iGetDynamoRecordResponse> {
-    if (listVersions)
-      return this.#listAllVersionsForEntity(
-        entity,
-        limit,
-        exclusiveStartKey
-      );
+    validate(
+      j.object().keys({
+        entity: j.object().required(),
+        options: j.object().keys({
+          listVersions: j.bool().default(false),
+          limit: j.number().integer().min(1).when("listVersions", {
+            not: true,
+            then: j.forbidden(),
+          }),
+          exclusiveStartKey: j.string().when("listVersions", {
+            not: true,
+            then: j.forbidden(),
+          }),
+        }),
+      }),
+      { entity, options },
+      undefined,
+      "interfaceInput",
+      () => {
+        return "Your input in the get requested doesn't conform the schema. Please check your input.";
+      }
+    );
+
+    if (options?.listVersions)
+      return this.#listAllVersionsForEntity(entity, options?.limit, options?.exclusiveStartKey);
 
     this.#validateRequiredSchemaForFunction("getSchema");
     validate(this.#schemas.getSchema, entity, undefined, "interface");
@@ -49,18 +91,33 @@ class DynamoDB {
 
   async list(
     entity: Record<string, any>,
-    limit: number,
-    exclusiveStartKey: string | any,
-    callback: (params: QueryCommandInput) => QueryCommandInput
+    options?: { limit?: number, exclusiveStartKey?: string },
+    callback?: (params: QueryCommandInput) => QueryCommandInput
   ): Promise<iListDynamoRecordsResponse> {
     this.#validateRequiredSchemaForFunction("listEntitySchema");
+    validate(
+      j.object().keys({
+        entity: j.object().required(),
+        options: j.object().keys({
+          limit: j.number().integer().min(1),
+          exclusiveStartKey: j.string()
+        }),
+      }),
+      { entity, options },
+      undefined,
+      "interfaceInput",
+      () => {
+        return "Your input in the list requested doesn't conform the schema. Please check your input.";
+      }
+    );
+
     validate(this.#schemas.listEntitySchema, entity, undefined, "interface");
 
     return this.#tableInterface.listDynamoRecords(
       entity,
       this.#mapping,
-      limit,
-      exclusiveStartKey,
+      options?.limit,
+      options?.exclusiveStartKey,
       callback
     );
   }
@@ -92,11 +149,25 @@ class DynamoDB {
 
   async update(
     entity: Record<string, any>,
-    username: string,
-    callback: (params: UpdateCommandInput) => UpdateCommandInput
+    options: { executorUsername: string },
+    callback?: (params: UpdateCommandInput) => UpdateCommandInput
   ): Promise<iUpdateDynamoRecordResponse> {
     this.#validateRequiredSchemaForFunction("interfaceUpdateSchema");
     this.#validateRequiredSchemaForFunction("interfaceCreateSchema");
+    validate(
+      j.object().keys({
+        entity: j.object().required(),
+        options: j.object().keys({
+          executorUsername: j.string().required()
+        }).required()
+      }),
+      { entity, options },
+      undefined,
+      "interfaceInput",
+      () => {
+        return "Your input in the update requested doesn't conform the schema. Please check your input.";
+      }
+    );
 
     // We build the schema with requestContext's username, because that allows internal updates by other Lambdas by authorizing on the username in the schema
     const schema = j
@@ -119,7 +190,7 @@ class DynamoDB {
 
     const input = {
       requestContext: {
-        authorizer: { username },
+        authorizer: { username: options.executorUsername },
       },
       entity,
     };
@@ -129,7 +200,7 @@ class DynamoDB {
     return this.#tableInterface.updateDynamoRecord(
       entity,
       this.#mapping,
-      username,
+      options.executorUsername,
       callback
     );
   }
@@ -184,6 +255,6 @@ type PineappleSchemaNames =
   | "listEntitySchema"
   | "outputEntitySchema";
 
-type PineappleSchemas = { [key in PineappleSchemaNames]: object };
+type PineappleSchemas = { [key in PineappleSchemaNames]: j.ObjectSchema };
 
 export { DynamoDB };

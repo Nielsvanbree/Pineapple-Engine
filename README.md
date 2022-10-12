@@ -48,6 +48,8 @@ Now that you have your Pineapple table design, you can start filling in the Pine
 ### Global config
 General configuration.
 ```typescript
+// pineappleConfig/global.ts
+
 import { iGlobalConfig } from "@levarne/pineapple-engine";
 import { v4 as uuidv4 } from "uuid";
 
@@ -55,7 +57,7 @@ const globalConfig: iGlobalConfig = {
   entityName: "payment",
   dataSource: "dynamodb", // Currently the only supported source
   tableName: "fruitful-development-pineapple-provisioned", // Replace with your own table name
-  idGeneratorFunction: uuidv4 // Optional: overwrite the automatically generated id by Pineapple Enfine (we use a ULID) by your own function to generate a unique id, such as a uuid
+  idGeneratorFunction: uuidv4 // Optional: overwrite the automatically generated id by Pineapple Engine (we use a ULID) by your own function to generate a unique id, such as a uuid
 }
 
 export { globalConfig };
@@ -63,6 +65,8 @@ export { globalConfig };
 ### Mapping config
 Because the Pineapple table design uses some generic attribute names for all present keys (pk, sk, gsiPk1, gsiPk2, gsiPk3, gsiSk1) that can mean different things depending on your entity, we need a way to easily map those generic but unreadable attribute names to readable attribute names that are relevant to the entity you're working with. By filling in the mapping config according to your design, you make sure you only have to deal with readable attributes inside your function code, because Pineapple Engine takes care of the translations. Take a look at the example below for our payment entity.
 ```typescript
+// pineappleConfig/mapping.ts
+
 import { iMappingConfig } from "@levarne/pineapple-engine";
 
 const mappingConfig: iMappingConfig = {
@@ -88,8 +92,10 @@ export { mappingConfig };
 ### Schemas
 Schemas to validate your entity at certain points within your application. The interface schemas are used inside Pineapple Engine to validate your entity before sending your request to the table interface. These are mandatory to use inside Pineapple Engine to ensure nothing malformed is being send and better error messages can be displayed to you as a developer. Set them up carefully and take the table design into account when thinking of required fields or fields that cannot go with or without each other. The usage of other schemas than the interface schemas is up to you how to use within your Serverless setup and are here just as an example. You are also free to setup your joi schemas the way you like.
 ```typescript
-import { j, metaInfoSchema, prefixedUlid } from "../../../helpers/joi";
-import { isValidUlid } from "../../../helpers/utils";
+// pineappleConfig/schemas.ts
+
+import { isValidUlid } from "@levarne/pineapple-engine/helpers/utils";
+import { j, metaInfoSchema, prefixedUlid  } from "@levarne/pineapple-engine/helpers/joi";
 
 // Base schema for the entity, but without an id so we can create an update & create schema from here.
 // This schema shouldn't contain all elements that can be created, but should only contain queryable & filterable attributes. Extend the create & update schemas with the other fields.
@@ -202,7 +208,8 @@ export {
 ### Grouping configs together
 To group all config files together, use an index.ts file. This grouped configuarion can then be used to initialize your Pineapple Engine Entity.
 ```typescript
-// index.ts
+// pineappleConfig/index.ts
+
 import { globalConfig } from "./global";
 import { mappingConfig } from "./mapping";
 import * as schemas from "./schemas";
@@ -225,12 +232,15 @@ const paymentParams = {
   paymentId: "payment_01GEFN3JXCG5D0R6APK0H5M9WM",
   version: 0, // 0 is used as the latest version of an object, replace with a ULID to retrieve a specific version of this object
 };
+const options = {
+  listVersions: true, // List versions true or false
+  limit: 10, // Version limit to retrieve
+  exclusiveStartKey: "eyJwayI6InBheW1lbnRfMDFHRUNaUDg5V0ExRU44VkZFUUg1WTFOUkIiLCJzayI6InBheW1lbnRWZXJzaW9uI3ZlcnNpb25fMDFHRUNaUUJXUzhWVlBaWE5ENFNBUUVLNjkifQ==" // Provide an optional exclusiveStartKey for pagination
+};
 
 const { entity: payment, lastEvaluatedKey } = await Payment.dynamodb.get(
   paymentParams,
-  true, // List versions
-  10, // Version limit to retrieve
-  // Provide an optional exclusiveStartKey for pagination
+  options
 );
 
 ...
@@ -240,12 +250,15 @@ const { entity: payment, lastEvaluatedKey } = await Payment.dynamodb.get(
 const listParams = {
   orderId: "order_01GECZNFYAZHJVS2C8HA7PBYSP"
 };
+const options = {
+  limit: 10, // Optional item limit to query for
+  exclusiveStartKey: undefined // Optional exclusiveStartKey
+};
 
 // The Pineapple Engine figures out what index and keys to use as query or filter attributes and always strives for the most efficient query
 const { items, lastEvaluatedKey } = await Payment.dynamodb.list(
   listParams,
-  10, // Optional item limit to query for
-  undefined, // Optional exclusiveStartKey
+  options,
   (params) => {
     // Callback with the constructed params object as a value that will be send to the DynamoDB query command. You can change the object any way you like at this point and the output should always be a valid params object that the DynamoDB query command can understand.
     // Use this callback if you need any non-standard Pineapple query behaviour, such as filtering on price > 100.
@@ -263,16 +276,89 @@ const updateParams = {
   productId: "product_01GECZJH68H1DG0CG7WCGZ2818",
   userId: "user_01GEFNPWNYA14CYQ4YN5H3JHEJ"
 };
+const options = {
+  executorUsername: "user_01GEFNPWNYA14CYQ4YN5H3JHEJ" // userId that performs the update
+};
 
 const { entity: newPayment } = await Payment.dynamodb.update(
   updateParams,
-  "user_01GEFNPWNYA14CYQ4YN5H3JHEJ", // userId that performs the update
+  options,
   (params) => {
     // Callback with the constructed params object as a value that will be send to the DynamoDB update command. You can change the object any way you like at this point and the output should always be a valid params object that the DynamoDB update command can understand.
     // Use this callback if you need to overwrite any standard Pineapple Engine behaviour, for example to dynamically change the automatically generated paymentId if your id is dependent on any business logic.
     return params;
   }
 );
+```
+
+## Pineapple Utils
+Pineapple Engine supports a few utils that are relevant to building with Pineapple entities.
+```typescript 
+// Check if a value is a valid ulid, handy in your joi schemas for example
+isValidUlid(value: string) => boolean
+
+// Adds a new version for an object; use this inside a dynamo stream event when an INSERT or MODIFY event has taken place
+// For an example look at the versioning section below
+addNewVersion(
+  newItem: Record<string, any>,
+  options: { tableName: string }
+) => Promise<Record<string, any>>
+```
+
+## Pineapple Joi 
+Pineapple Engine heavily uses joi for validating inputs and outputs at different levels. To make your life as a developer a little easier, the Pineapple-Engine exports a few Joi helper functions that you can use when developing your Pineapple entity. 
+
+<b>Note: since Joi enforces the usage of the same npm version across your function code, Joi is listed as a peer dependency in this project. Your Joi version and the Pineapple-Engine Joi version therefore need to match.</b>
+
+```typescript 
+// Included utilities in pineappleJoi
+
+// The schema with automatically generated meta information, such as createdBy and version
+const metaInfoSchema = j.object().keys({
+  version: j.number().integer().min(0).required(),
+  latestVersion: j.when("version", {
+    is: 0,
+    then: j.number().integer().min(1).required(),
+    otherwise: j.forbidden(),
+  }),
+  createdBy: j.string().when("version", {
+    is: 0,
+    then: j.string().required(),
+    otherwise: j.forbidden(),
+  }),
+  createdAt: j.date().iso().cast("string").required(),
+  updatedAt: j.date().iso().cast("string").required(),
+  updatedBy: j.string().required(),
+});
+
+// Can be used as a custom schema validation function, which validates if your value adheres to the pattern: {{anyStringValue}}_{{uuid}}
+prefixedUuid(value: string) => string
+
+// Can be used as a custom schema validation function, which validates if your value adheres to the pattern: {{anyStringValue}}_{{ulid}}
+prefixedUlid(value: string) => string
+
+// Joi exported as j
+j
+
+// An extension of j.validate(), which also displays where the validation error occurred if there was any error
+// With the formatValidationError callback you can add an extra error message for better readability, which is especially useful if you validate at multiple stages
+validate(
+  schema: j.ObjectSchema,
+  event: Record<string, any>,
+  options = {},
+  validatedAt = "input",
+  formatValidationError?: (error: any) => string
+) => any
+
+```
+```typescript 
+// Example usage inside your code
+import { j, validate, metaInfoSchema, prefixedUlid, prefixedUuid } from "@levarne/pineapple-engine/helpers/joi";
+
+const paymentId = j
+  .string()
+  .regex(/^payment_/)
+  .custom(prefixedUlid);
 ```
 
 ## Pineapple single-table design
@@ -318,45 +404,32 @@ Example: our payment entity holds information like the linked order, price paid 
 The Pineapple single-table design stores your data using a versioning system supported by <a target="_blank" href="https://www.npmjs.com/package/ulid">ulid</a>. Your object always has a latest version and a list of version objects that represent your object over time, so there is always a history of each object you store in your table. The latest version of your object is marked with <b>version_0</b>. The version 0 will receive all updates through the Pineapple Engine. You will have to setup a DynamoDB stream function that generates the actual version objects for you. An example of how to achieve this can be seen below. You only have to setup this stream once per table for all entities inside that table.
 <br>
 
-We chose ulid for our versionig system because it's a unique identifief, but with an ordering of time. That means that you can list versions created between date x and y within your DynamoDB table, which would have been difficult with another setup.
+We chose ulid for our versionig system because it's a unique identifier, but with an ordering of time. That means that you can list versions created between date x and y within your DynamoDB table, which would have been difficult with another setup.
 
 ```javascript
-// First import ulid & your own helper functions
-const { translateStreamImage, put } = require("../_helpers/dynamodb");
-const ULID = require("ulid");
+// First import the Pineapple translateStreamImage & addNewVersion functions
+const { translateStreamImage } = require("@levarne/pineapple-engine/helpers/dynamodb");
+const { addNewVersion } = require("@levarne/pineapple-engine/helpers/utils");
 
 // Reference to your Pineapple table
 const { TABLE_NAME } = process.env;
 
 ...
 
-// Looping over your stream records and check if it's a version 0 (can also be done using DynamoDB filter patterns intead of inside your code)
-if ((record.eventName === 'INSERT' || record.eventName === 'MODIFY') && newItem.version === 0 && newItem.latestVersion !== undefined)
-    newVersion = addNewVersion(newItem);
+if (record.dynamodb.OldImage)
+  record.dynamodb.OldImage = translateStreamImage(record.dynamodb.OldImage);
 
-...
+if (record.dynamodb.NewImage)
+  record.dynamodb.NewImage = translateStreamImage(record.dynamodb.NewImage);
 
-async function addNewVersion(newItem) {
-  // Extra check to prevent a stream loop in case you made a mistake earlier!
-  if (newItem.latestVersion === 0)
-    return;
+const newItem = record.dynamodb.NewImage;
+const oldItem = record.dynamodb.OldImage;
 
-  const { createdAt, createdBy, latestVersion, entity, gsiSk1, ...newVersionItemAttributes } = newItem;
-    
-  newVersionItemAttributes.version = ULID.ulid();
-  newVersionItemAttributes.sk = newVersionItemAttributes.sk.replace(/#version_0/, `#version_${newVersionItemAttributes.version}`);
-  newVersionItemAttributes.sk = newVersionItemAttributes.sk.replace(entity, `${entity}Version`);
-  newVersionItemAttributes.versionNumber = latestVersion;
-
-  const params = {
-    Item: {
-      ...newVersionItemAttributes
-    },
-    TableName: TABLE_NAME
-  };
-
-  return (await put(params)).item;
-}
+// Looping over your stream records and check if it's an INSERT or MODIFY event 
+// The Pineapple addNewVersion function will check if it's a version 0 and has a latestVersion of at least 1 
+// You can also filter on version 0 by using DynamoDB filter patterns to reduce the amount of stream records
+if ((record.eventName === 'INSERT' || record.eventName === 'MODIFY'))
+    newVersion = await addNewVersion(newItem, { tableName: TABLE_NAME });
 ```
 
 If everyting went well, you now have an object and a version after the creation of your entity object.
