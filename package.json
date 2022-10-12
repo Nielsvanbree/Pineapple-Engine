@@ -1,8 +1,14 @@
 {
   "name": "@levarne/pineapple-engine",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Fruitful Serverless Pineapples will rule the world 1 day",
   "main": "dist/pineapple.js",
+  "exports": {
+    ".": "./dist/pineapple.js",
+    "./helpers/dynamodb": "./dist/helpers/dynamodb.js",
+    "./helpers/jois": "./dist/helpers/joi.js",
+    "./helpers/utils": "./dist/helpers/utils.js"
+  },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "tsc && node dist/pineapple.js",
