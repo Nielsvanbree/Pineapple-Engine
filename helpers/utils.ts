@@ -23,6 +23,7 @@ async function addNewVersion(
           version: j.number().min(0).max(0).required(),
           latestVersion: j.number().min(1).required(),
         })
+        .unknown()
         .required(),
     }),
     { newItem },

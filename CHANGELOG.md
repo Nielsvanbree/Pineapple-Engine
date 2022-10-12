@@ -5,13 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.1.0] - 2022-10-11
+## [1.1.1] - 2022-10-12
 
 ### Added
 - Made helpers available (dynamodb, joi and utils) through /helpers/{{helperName}}
   - Utils exports <i>isValidUlid and addNewVersion</i>
   - Joi exports <i>j, metaInfoSchema, validate, prefixedUuid and prefixedUlid</i>
   - Dynamodb exports <i>get, dynamoGetPineapple, update, put, dynamoUpdatePineapple, query, unpackStreamRecord, translateStreamImage, stripDynamoObject, QueryCommandInput, UpdateCommandInput</i>
+
+### Fixed
+- AddNewVersion util joi validation now accepts unknown keys
+
+## [1.1.0] - 2022-10-12
+
+### Added
 - Updated readme with all changes and additions
 - Added joi as a peer dependency
 - Added translateStreamImage to unmarshall a DynamoDB object into a JavaScript object from inside your DynamoDB stream function
