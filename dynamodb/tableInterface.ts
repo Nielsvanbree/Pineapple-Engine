@@ -19,23 +19,35 @@ class TableInterface {
 
   async addNewVersion(newItem: Record<string, any>) {
     // Prevents a stream loop!
-    if (newItem.latestVersion === 0)
-      return;
-  
-    const { createdAt, createdBy, latestVersion, entity, gsiSk1, ...newVersionItemAttributes } = newItem;
-      
+    if (newItem.latestVersion === 0) return;
+
+    const {
+      createdAt,
+      createdBy,
+      latestVersion,
+      entity,
+      gsiSk1,
+      ...newVersionItemAttributes
+    } = newItem;
+
     newVersionItemAttributes.version = ulid();
-    newVersionItemAttributes.sk = newVersionItemAttributes.sk.replace(/#version_0/, `#version_${newVersionItemAttributes.version}`);
-    newVersionItemAttributes.sk = newVersionItemAttributes.sk.replace(entity, `${entity}Version`);
+    newVersionItemAttributes.sk = newVersionItemAttributes.sk.replace(
+      /#version_0/,
+      `#version_${newVersionItemAttributes.version}`
+    );
+    newVersionItemAttributes.sk = newVersionItemAttributes.sk.replace(
+      entity,
+      `${entity}Version`
+    );
     newVersionItemAttributes.versionNumber = latestVersion;
-  
+
     const params = {
       Item: {
-        ...newVersionItemAttributes
+        ...newVersionItemAttributes,
       },
-      TableName: this.tableName
+      TableName: this.tableName,
     };
-  
+
     return (await put(params)).item;
   }
 
@@ -68,7 +80,10 @@ class TableInterface {
       },
       ExpressionAttributeValues: {
         ":pk": pk,
-        ":sk": sk.replace(mappingClassInstance.entityValues.entity, `${mappingClassInstance.entityValues.entity}Version`),
+        ":sk": sk.replace(
+          mappingClassInstance.entityValues.entity,
+          `${mappingClassInstance.entityValues.entity}Version`
+        ),
       },
     };
 
@@ -76,11 +91,7 @@ class TableInterface {
 
     const [res, latestVersion] = await Promise.all([
       query(params),
-      this.getSpecificVersion(
-        pk,
-        `${sk}0`,
-        decoder
-      )
+      this.getSpecificVersion(pk, `${sk}0`, decoder),
     ]);
     let versions = res.items;
 
@@ -186,7 +197,10 @@ class TableInterface {
     let { pk, sk } = encoder(entity);
 
     if (entity.version !== 0)
-      sk = sk.replace(mappingClassInstance.entityValues.entity, `${mappingClassInstance.entityValues.entity}Version`);
+      sk = sk.replace(
+        mappingClassInstance.entityValues.entity,
+        `${mappingClassInstance.entityValues.entity}Version`
+      );
 
     const res = await dynamoGetPineapple(this.tableName, pk, sk);
     if (!res) return {};
@@ -229,7 +243,7 @@ class TableInterface {
       gsiSk1Misses,
       sortKeyConstruction,
       usedMapping,
-    } = encoder(entity as Record<string, any> & string) as any; // TODO: figure out if attachments still work here and get the typing right, because according to TypeScript this isn't possible
+    } = encoder(entity as Record<string, any> & string, username) as any; // TODO: figure out if attachments still work here and get the typing right, because according to TypeScript this isn't possible
     if (type === "attachment")
       attributes = { ...attributes, ...creationAttributes };
 
@@ -298,7 +312,6 @@ class TableInterface {
         pk,
         sk,
         newItem,
-        username,
         attributes,
         creationAttributes,
         true,
@@ -421,10 +434,9 @@ class TableInterface {
   async getSpecificVersion(
     pk: string,
     sk: string,
-    decoder: Function,
+    decoder: Function
   ): Promise<Record<string, any> | undefined> {
-    if (!pk || !sk)
-      return undefined;
+    if (!pk || !sk) return undefined;
 
     const version = await dynamoGetPineapple(this.tableName, pk, sk);
     if (!version)

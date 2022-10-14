@@ -37,7 +37,7 @@ async function get() {
   }
 }
 
-getWithVersions().then(res => {
+get().then(res => {
   console.log("🚀 ~ file: get.js ~ line 15 ~ get ~ res", res);
 }).catch(err => {
   console.error("🚀 ~ file: get.js ~ line 17 ~ get ~ err", err);
