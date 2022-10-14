@@ -122,7 +122,6 @@ async function dynamoUpdatePineapple(
   pk: string,
   sk: string,
   newItem: boolean,
-  executorId: string,
   attributes?: Record<string, any>,
   createdAttributes?: Record<string, any>,
   returnParams: boolean = false,
@@ -130,7 +129,6 @@ async function dynamoUpdatePineapple(
   newItemCheck: boolean = true,
   attributeCallback?: (key: string, value: any) => string
 ): Promise<UpdateCommandInput & Record<string, any>> {
-  const now = new Date().toISOString();
   const params: UpdateCommandInput = {
     TableName,
     Key: {
@@ -138,17 +136,13 @@ async function dynamoUpdatePineapple(
       sk,
     },
     ExpressionAttributeNames: {
-      "#updatedAt": "updatedAt",
-      "#updatedBy": "updatedBy",
       "#latestVersion": "latestVersion",
     },
     ExpressionAttributeValues: {
-      ":updatedAt": now,
-      ":updatedBy": executorId,
       ":latestVersion": 1,
     },
     UpdateExpression:
-      "ADD #latestVersion :latestVersion SET #updatedAt = :updatedAt, #updatedBy = :updatedBy",
+      "ADD #latestVersion :latestVersion",
     ReturnValues: "ALL_NEW",
   };
 
@@ -156,8 +150,6 @@ async function dynamoUpdatePineapple(
     attributes = {
       ...attributes,
       ...createdAttributes,
-      createdAt: now,
-      createdBy: executorId,
     };
     if (newItemCheck)
       params.ConditionExpression =
@@ -176,7 +168,7 @@ async function dynamoUpdatePineapple(
       if (params.ExpressionAttributeValues)
         params.ExpressionAttributeValues[`:${decodedKey}`] = value;
 
-      params.UpdateExpression += `, #${decodedKey} = :${decodedKey}`;
+      params.UpdateExpression += `${params.UpdateExpression?.endsWith(":latestVersion") ? " SET" : ","} #${decodedKey} = :${decodedKey}`;
     }
   });
 
