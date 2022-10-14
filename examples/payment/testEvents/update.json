@@ -1,5 +1,4 @@
 {
-  "status": "open",
-  "orderId": "order_01GED091GHEWQM4CV9NEYMJ7WN",
-  "productId": "product_01GECZJH68H1DG0CG7WCGZ2818"
+  "status": "paid",
+  "paymentId": "payment_01GEJE9E4M53P559K3R5FTX9E4"
 }

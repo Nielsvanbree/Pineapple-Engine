@@ -10,7 +10,7 @@ class Mapping {
     this.#idGeneratorFunction = idGeneratorFunction;
   }
 
-  encodeEntity(entity: Record<string, any>): iEncodedEntityResponse {
+  encodeEntity(entity: Record<string, any>, executorUsername?: string): iEncodedEntityResponse {
     if (!entity || typeof entity !== "object")
       throw {
         statusCode: 400,
@@ -31,6 +31,7 @@ class Mapping {
       entitySpecificMapping: decodedToEncodedMapping,
       sortKeyConstruction: this.#mappingConfig.sortKeyConstruction,
       queryableAttributesFromEntity: this.#mappingConfig.queryableAttributes,
+      executorUsername
     });
   }
 
@@ -39,7 +40,8 @@ class Mapping {
   }
 
   encodeAttachment(
-    attachmentName: string
+    attachmentName: string,
+    executorUsername?: string
   ): (attachment: Record<string, any>) => iEncodedEntityResponse {
     return (attachment: Record<string, any>): iEncodedEntityResponse => {
       const {
@@ -64,6 +66,7 @@ class Mapping {
         entitySpecificMapping: decodedToEncodedMapping,
         sortKeyConstruction,
         queryableAttributesFromEntity: queryableAttributesForAttachment,
+        executorUsername
       });
     };
   }
@@ -86,11 +89,13 @@ class Mapping {
     entitySpecificMapping,
     sortKeyConstruction,
     queryableAttributesFromEntity,
+    executorUsername
   }: {
     entity: Record<string, any>;
     entitySpecificMapping: any;
     sortKeyConstruction: iSortKeyConstruction;
     queryableAttributesFromEntity: Array<QueryableAttributes>;
+    executorUsername?: string;
   }): iEncodedEntityResponse {
     if (!entity || typeof entity !== "object")
       throw {
@@ -104,6 +109,27 @@ class Mapping {
     };
   
     encodeEntityAttributes(entity, usedMapping);
+
+    const newItem: boolean = entity.pk ? false : true;
+
+    if (executorUsername) {
+      const now = new Date().toISOString();
+      const metaDataTimestamps: {
+        updatedAt: string;
+        updatedBy: string;
+        createdAt?: string;
+        createdBy?: string;
+      } = {
+        updatedAt: now,
+        updatedBy: executorUsername,
+      };
+      if (newItem) {
+        metaDataTimestamps.createdAt = now;
+        metaDataTimestamps.createdBy = executorUsername;
+      }
+      entity = { ...entity, ...metaDataTimestamps };
+    }
+
     const { gsiSk1Contains, gsiSk1Misses } = addSortKeysToEntity({
       entity,
       sortKeyConstruction,
@@ -117,6 +143,7 @@ class Mapping {
       sortKeyConstruction,
       queryableAttributesFromEntity,
       usedMapping,
+      newItem
     });
   }
 
@@ -127,6 +154,7 @@ class Mapping {
     sortKeyConstruction,
     queryableAttributesFromEntity,
     usedMapping,
+    newItem
   }: {
     entity: Record<string, any>;
     gsiSk1Contains: Array<string>;
@@ -134,9 +162,8 @@ class Mapping {
     sortKeyConstruction: iSortKeyConstruction;
     queryableAttributesFromEntity: Array<QueryableAttributes>;
     usedMapping: any;
+    newItem: boolean;
   }): iEncodedEntityResponse {
-    const newItem: boolean = entity.pk ? false : true;
-  
     const response: iEncodedEntityResponse = {
       pk: `${newItem ? `${entity.entity}_${this.#idGeneratorFunction()}` : entity.pk}`,
       sk: entity.sk,
