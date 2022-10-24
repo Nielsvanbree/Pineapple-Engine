@@ -10,6 +10,11 @@ import {
 } from "./tableInterface";
 import { Mapping, iMappingConfig } from "./mapping";
 import { j, validate } from "../helpers/joi";
+import {
+  unpackStreamRecord,
+  DynamoDBRecord,
+  AttributeValue,
+} from "../helpers/dynamodb";
 
 class DynamoDB {
   #mapping: Mapping;
@@ -32,15 +37,22 @@ class DynamoDB {
     validateSchemasAreJoiSchemas(schemas);
     validate(
       j.object().keys({
-        global: j.object().keys({
-          tableName: j.string().required(),
-          entityName: j.string().required(),
-          idGeneratorFunction: j.func()
-        }).required(),
+        global: j
+          .object()
+          .keys({
+            tableName: j.string().required(),
+            entityName: j.string().required(),
+            idGeneratorFunction: j.func(),
+          })
+          .required(),
         mappingConfig: j.object().required(),
-        schemas: j.object().required()
+        schemas: j.object().required(),
       }),
-      { global: { tableName, entityName, idGeneratorFunction }, mappingConfig, schemas },
+      {
+        global: { tableName, entityName, idGeneratorFunction },
+        mappingConfig,
+        schemas,
+      },
       undefined,
       "pineappleInitialization",
       () => {
@@ -55,7 +67,11 @@ class DynamoDB {
 
   async get(
     entity: Record<string, any>,
-    options?: { listVersions?: boolean, limit?: number, exclusiveStartKey?: string },
+    options?: {
+      listVersions?: boolean;
+      limit?: number;
+      exclusiveStartKey?: string;
+    }
   ): Promise<iListAllVersionsForEntityResponse & iGetDynamoRecordResponse> {
     validate(
       j.object().keys({
@@ -81,7 +97,11 @@ class DynamoDB {
     );
 
     if (options?.listVersions)
-      return this.#listAllVersionsForEntity(entity, options?.limit, options?.exclusiveStartKey);
+      return this.#listAllVersionsForEntity(
+        entity,
+        options?.limit,
+        options?.exclusiveStartKey
+      );
 
     this.#validateRequiredSchemaForFunction("getSchema");
     validate(this.#schemas.getSchema, entity, undefined, "interface");
@@ -91,7 +111,7 @@ class DynamoDB {
 
   async list(
     entity: Record<string, any>,
-    options?: { limit?: number, exclusiveStartKey?: string },
+    options?: { limit?: number; exclusiveStartKey?: string },
     callback?: (params: QueryCommandInput) => QueryCommandInput
   ): Promise<iListDynamoRecordsResponse> {
     this.#validateRequiredSchemaForFunction("listEntitySchema");
@@ -100,7 +120,7 @@ class DynamoDB {
         entity: j.object().required(),
         options: j.object().keys({
           limit: j.number().integer().min(1),
-          exclusiveStartKey: j.string()
+          exclusiveStartKey: j.string(),
         }),
       }),
       { entity, options },
@@ -157,9 +177,12 @@ class DynamoDB {
     validate(
       j.object().keys({
         entity: j.object().required(),
-        options: j.object().keys({
-          executorUsername: j.string().required()
-        }).required()
+        options: j
+          .object()
+          .keys({
+            executorUsername: j.string().required(),
+          })
+          .required(),
       }),
       { entity, options },
       undefined,
@@ -203,6 +226,56 @@ class DynamoDB {
       options.executorUsername,
       callback
     );
+  }
+
+  unpackStreamRecord(streamRecord: DynamoDBRecord): {
+    eventName?: "INSERT" | "MODIFY" | "REMOVE";
+    oldImage?: Record<string, any>;
+    newImage?: Record<string, any>;
+    rawOldImage?: Record<string, any>;
+    rawNewImage?: Record<string, any>;
+  } {
+    validate(
+      j.object().keys({
+        streamRecord: j
+          .object()
+          .keys({
+            eventName: j.string().valid("INSERT", "MODIFY", "REMOVE"),
+            dynamodb: j
+              .object()
+              .keys({
+                OldImage: j.object().keys(),
+                NewImage: j.object().keys(),
+              })
+              .required()
+              .unknown(),
+          })
+          .required()
+          .unknown(),
+      }),
+      { streamRecord },
+      undefined,
+      "interfaceInput",
+      () => {
+        return "Your input in the unpackStreamRecord doesn't conform the schema. Please check if your input is a valid DynamoDB stream record.";
+      }
+    );
+
+    const { oldImage, newImage } = unpackStreamRecord({
+      dynamodb: streamRecord.dynamodb,
+    });
+
+    return {
+      eventName: streamRecord.eventName,
+      rawOldImage: oldImage,
+      rawNewImage: newImage,
+      oldImage: oldImage
+        ? this.#mapping.decodeEntity(JSON.parse(JSON.stringify(oldImage)))
+        : undefined,
+      newImage: newImage
+        ? this.#mapping.decodeEntity(JSON.parse(JSON.stringify(newImage)))
+        : undefined,
+    };
   }
 
   async #listAllVersionsForEntity(
