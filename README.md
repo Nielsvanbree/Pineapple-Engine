@@ -291,6 +291,62 @@ const { entity: newPayment } = await Payment.dynamodb.update(
 );
 ```
 
+## Working With DynamoDB Streams
+Handling DynamoDB stream records with Pineapple is made very easy. To unpack a stream's newImage & oldImage, you can use the ``` Pineapple.dynamodb.unpackStreamRecord(record: DynamoDBRecord)``` method, which outputs the decoded and non-decoded variants, as well as the stream's eventName.
+```typescript 
+// DynamoStreamHandler.js
+import { Pineapple } from "@levarne/pineapple-engine";
+import { addNewVersion } from "@levarne/pineapple-engine/helpers/utils";
+import { DynamoDBRecord } from "@levarne/pineapple-engine/helpers/dynamodb";
+import { pineappleConfig } from "../pineappleConfig/index";
+import { Records } from "../testEvents/dynamoStream.json";
+
+const TABLE_NAME = "YOUR-TABLE-NAME"; // Replace with your table name, e.g. through environment variables
+
+const payment = new Pineapple(pineappleConfig);
+
+async function processStreamRecords() {
+  try {
+    await Promise.all(
+      Records.map(async (record: any) => {
+        try {
+          await processRecord(record);
+        } catch (error) {
+          console.log("Error on record:", record);
+          console.error(
+            "module.exports.handler -> single record error -> error",
+            error
+          );
+        }
+      })
+    );
+  } catch (error) {
+    console.error("🚀 ~ file: get.js ~ line 21 ~ get ~ error", error);
+    throw error;
+  }
+}
+
+async function processRecord(record: DynamoDBRecord) {
+  const { eventName, newImage, oldImage, rawNewImage, rawOldImage } =
+    payment.dynamodb.unpackStreamRecord(record);
+
+  let newVersion;
+  if (
+    (record.eventName === "INSERT" || record.eventName === "MODIFY") &&
+    newImage
+  )
+    newVersion = await addNewVersion(newImage, { tableName: TABLE_NAME });
+
+  return newVersion;
+}
+
+processStreamRecords()
+  .then((res) => {
+  })
+  .catch((err) => {
+  });
+```
+
 ## Pineapple Utils
 Pineapple Engine supports a few utils that are relevant to building with Pineapple entities.
 ```typescript 

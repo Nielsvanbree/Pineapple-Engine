@@ -1,4 +1,4 @@
-import { DynamoDB } from "@aws-sdk/client-dynamodb";
+import { DynamoDB, AttributeValue } from "@aws-sdk/client-dynamodb";
 import {
   DynamoDBDocument,
   GetCommandInput,
@@ -215,10 +215,10 @@ function unpackStreamRecord({
   eventName,
   dynamodb,
 }: {
-  eventName: "INSERT" | "MODIFY" | "REMOVE";
-  dynamodb: { OldImage?: Record<string, any>; NewImage?: Record<string, any> };
+  eventName?: "INSERT" | "MODIFY" | "REMOVE";
+  dynamodb: StreamRecord;
 }): {
-  eventName: "INSERT" | "MODIFY" | "REMOVE";
+  eventName?: "INSERT" | "MODIFY" | "REMOVE";
   oldImage?: Record<string, any>;
   newImage?: Record<string, any>;
 } {
@@ -276,6 +276,34 @@ type TransformResult = {
   lastEvaluatedKey: any;
 };
 
+// http://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_streams_StreamRecord.html
+interface StreamRecord {
+  ApproximateCreationDateTime?: number;
+  Keys?: { [key: string]: AttributeValue };
+  NewImage?: { [key: string]: AttributeValue };
+  OldImage?: { [key: string]: AttributeValue };
+  SequenceNumber?: string;
+  SizeBytes?: number;
+  StreamViewType?: 'KEYS_ONLY' | 'NEW_IMAGE' | 'OLD_IMAGE' | 'NEW_AND_OLD_IMAGES';
+}
+
+// http://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_streams_Record.html
+interface DynamoDBRecord {
+  awsRegion?: string;
+  dynamodb: StreamRecord;
+  eventID?: string;
+  eventName?: 'INSERT' | 'MODIFY' | 'REMOVE';
+  eventSource?: string;
+  eventSourceARN?: string;
+  eventVersion?: string;
+  userIdentity?: any;
+}
+
+// http://docs.aws.amazon.com/lambda/latest/dg/eventsources.html#eventsources-ddb-update
+interface DynamoDBStreamEvent {
+  Records: DynamoDBRecord[];
+}
+
 export {
   get,
   dynamoGetPineapple,
@@ -288,4 +316,7 @@ export {
   stripDynamoObject,
   QueryCommandInput,
   UpdateCommandInput,
+  DynamoDBStreamEvent,
+  DynamoDBRecord,
+  AttributeValue
 };

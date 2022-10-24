@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.3] - 2022-10-24
+
+### Added
+- To unpack a DynamoDB stream record and decode the newImage & oldImage, you can now use a Pineapple class instance. Simply invoke PineappleClassInstance.dynamodb.unpackStreamRecord(record). It will output the decoded newImage & oldImage and the non decoded rawNewImage & rawOldImage if they are part of the stream record. Unmarshalling of the record is also done by this Pineapple method.
+- Exported interfaces DynamoDBStreamEvent, DynamoDBRecord and AttributeValue inside the dynamodb helper to help you with your stream handling in a TypeScript environment.
+
 ## [1.1.2] - 2022-10-12
 
 ### Fixed
