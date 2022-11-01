@@ -6,7 +6,7 @@
   "exports": {
     ".": "./dist/pineapple.js",
     "./helpers/dynamodb": "./dist/helpers/dynamodb.js",
-    "./helpers/jois": "./dist/helpers/joi.js",
+    "./helpers/joi": "./dist/helpers/joi.js",
     "./helpers/utils": "./dist/helpers/utils.js"
   },
   "scripts": {
