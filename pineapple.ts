@@ -12,7 +12,7 @@ class Pineapple {
       idGeneratorFunction,
       responseFormat,
       rootEntity,
-      attachmentId,
+      attachmentIdKeyName,
     },
     mappingConfig,
     schemas,
@@ -21,9 +21,9 @@ class Pineapple {
     mappingConfig: iMappingConfig;
     schemas: any;
   }) {
-    if (!rootEntity && !attachmentId)
+    if (!rootEntity && !attachmentIdKeyName)
       throw new Error(
-        "Please specify the unique attachmentId as this is mandatory for a non root entity"
+        "Please specify the unique attachmentIdKeyName as this is mandatory for a non root entity"
       );
 
     if (dataSource === "dynamodb")
@@ -33,7 +33,7 @@ class Pineapple {
           entityName,
           idGeneratorFunction,
           responseFormat: responseFormat || "V1",
-          attachmentId
+          attachmentIdKeyName
         },
         mappingConfig,
         schemas
@@ -53,7 +53,7 @@ interface iGlobalConfig {
   idGeneratorFunction?: () => string;
   responseFormat?: "V1" | "V2";
   rootEntity: boolean;
-  attachmentId?: string;
+  attachmentIdKeyName?: string;
 }
 
 export { Pineapple, iMappingConfig, iGlobalConfig };

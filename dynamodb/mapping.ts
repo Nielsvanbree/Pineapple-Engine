@@ -2,18 +2,18 @@ import { ulid } from "ulid";
 class Mapping {
   entityValues: { entity: string };
   #mappingConfig: iMappingConfig;
-  #attachmentId: string | undefined;
+  #attachmentIdKeyName: string | undefined;
   #idGeneratorFunction: () => string;
 
   constructor(
     entityName: string,
     mappingConfig: iMappingConfig,
-    attachmentId: string | undefined,
+    attachmentIdKeyName: string | undefined,
     idGeneratorFunction: () => string = ulid
   ) {
     this.entityValues = { entity: entityName };
     this.#mappingConfig = mappingConfig;
-    this.#attachmentId = attachmentId;
+    this.#attachmentIdKeyName = attachmentIdKeyName;
     this.#idGeneratorFunction = idGeneratorFunction;
   }
 
@@ -49,8 +49,8 @@ class Mapping {
     return decode(entity, this.#mappingConfig.encodedToDecodedMapping);
   }
 
-  get attachmentId() {
-    return this.#attachmentId;
+  get attachmentIdKeyName() {
+    return this.#attachmentIdKeyName;
   }
 
   #encode({
@@ -78,17 +78,17 @@ class Mapping {
     };
 
     let newItem: boolean = false;
-    if (this.#attachmentId) {
-      newItem = entity[this.#attachmentId] ? false : true;
+    if (this.#attachmentIdKeyName) {
+      newItem = entity[this.#attachmentIdKeyName] ? false : true;
       if (newItem)
-        entity[this.#attachmentId] = `${
+        entity[this.#attachmentIdKeyName] = `${
           this.entityValues.entity
         }_${this.#idGeneratorFunction()}`;
     }
 
     encodeEntityAttributes(entity, usedMapping);
 
-    newItem = this.#attachmentId ? newItem : entity.pk ? false : true;
+    newItem = this.#attachmentIdKeyName ? newItem : entity.pk ? false : true;
 
     if (executorUsername) {
       const now = new Date().toISOString();
@@ -144,7 +144,7 @@ class Mapping {
   }): iEncodedEntityResponse {
     const response: iEncodedEntityResponse = {
       pk: `${
-        newItem && !this.#attachmentId
+        newItem && !this.#attachmentIdKeyName
           ? `${entity.entity}_${this.#idGeneratorFunction()}`
           : entity.pk
       }`,

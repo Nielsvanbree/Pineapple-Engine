@@ -6,7 +6,7 @@ const globalConfig: iGlobalConfig = {
   tableName: "fruitful-development-pineapple-prov",
   responseFormat: "V2",
   rootEntity: false,
-  attachmentId: "paymentMethodId"
+  attachmentIdKeyName: "paymentMethodId"
 }
 
 export { globalConfig };
