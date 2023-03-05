@@ -59,8 +59,10 @@ class TableInterface {
   ): Promise<iListAllVersionsForEntityResponse> {
     exclusiveStartKey = decodeExclusiveStartKey(exclusiveStartKey);
     entity.version = "";
-    const encoder: Function = mappingClassInstance.encodeEntity.bind(mappingClassInstance);
-    const decoder: Function = mappingClassInstance.decodeEntity.bind(mappingClassInstance);
+    const encoder: Function =
+      mappingClassInstance.encodeEntity.bind(mappingClassInstance);
+    const decoder: Function =
+      mappingClassInstance.decodeEntity.bind(mappingClassInstance);
 
     const { pk, sk } = encoder(entity);
 
@@ -88,7 +90,9 @@ class TableInterface {
       this.getSpecificVersion(pk, `${sk}0`, decoder),
     ]);
 
-    const response: iListAllVersionsForEntityResponse = { entity: latestVersion };
+    const response: iListAllVersionsForEntityResponse = {
+      entity: latestVersion,
+    };
     if (lastEvaluatedKey)
       response.lastEvaluatedKey = encodeLastEvaluatedKey(lastEvaluatedKey);
 
@@ -110,8 +114,10 @@ class TableInterface {
     entity: Record<string, any>,
     mappingClassInstance: Mapping
   ): Promise<iGetDynamoRecordResponse> {
-    const encoder: Function = mappingClassInstance.encodeEntity.bind(mappingClassInstance);
-    const decoder: Function = mappingClassInstance.decodeEntity.bind(mappingClassInstance);
+    const encoder: Function =
+      mappingClassInstance.encodeEntity.bind(mappingClassInstance);
+    const decoder: Function =
+      mappingClassInstance.decodeEntity.bind(mappingClassInstance);
 
     let { pk, sk } = encoder(entity);
 
@@ -135,8 +141,10 @@ class TableInterface {
     username: string,
     callback?: (params: UpdateCommandInput) => UpdateCommandInput
   ): Promise<iUpdateDynamoRecordResponse> {
-    const encoder = mappingClassInstance.encodeEntity.bind(mappingClassInstance);
-    const decoder = mappingClassInstance.decodeEntity.bind(mappingClassInstance);
+    const encoder =
+      mappingClassInstance.encodeEntity.bind(mappingClassInstance);
+    const decoder =
+      mappingClassInstance.decodeEntity.bind(mappingClassInstance);
 
     let {
       pk,
@@ -148,7 +156,7 @@ class TableInterface {
       gsiSk1Misses,
       sortKeyConstruction,
       usedMapping,
-    } = encoder(entity as Record<string, any> & string, username) as any; // TODO: figure out if attachments still work here and get the typing right, because according to TypeScript this isn't possible
+    } = encoder(entity, username);
 
     const entityShouldNotUpdate =
       !newItem &&
@@ -195,35 +203,27 @@ class TableInterface {
         }
       }
 
-      let params = await dynamoUpdatePineapple(
-        this.tableName,
+      let params = await dynamoUpdatePineapple({
+        TableName: this.tableName,
         pk,
         sk,
         newItem,
         attributes,
-        creationAttributes,
-        true,
-        true,
-        (key, value) => {
+        createdAttributes: creationAttributes,
+        returnParams: true,
+        newItemCheck: true,
+        attributeCallback: (key, value) => {
           // We get the attribute that will be added to the params object and turn the encoded key into a decoded key, because that will make the params object more readable for the backend engineer in case the callback is needed within the update API
           return getDecodedKeyFromAttribute(key, value, decoder);
-        }
-      );
+        },
+      });
 
       if (callback && typeof callback === "function") {
         // Do something extra with the params that is not included in the default dynamoUpdatePineapplePineapple before updating the DynamoDB record, such as appending a list
         params = callback(params);
       }
 
-      try {
-        decodedRecord = decoder((await update(params)).item);
-      } catch (error: any) {
-        console.error(
-          "🚀 ~ file: tableInterface.js ~ line 151 ~ updateDynamoRecord ~ error",
-          error
-        );
-        decodedRecord = error;
-      }
+      decodedRecord = decoder((await update(params)).item);
     }
 
     const response: iUpdateDynamoRecordResponse = {};
@@ -240,8 +240,10 @@ class TableInterface {
     callback?: (params: QueryCommandInput) => QueryCommandInput
   ): Promise<iListDynamoRecordsResponse> {
     exclusiveStartKey = decodeExclusiveStartKey(exclusiveStartKey);
-    const encoder: Function = mappingClassInstance.encodeEntity.bind(mappingClassInstance);
-    const decoder: Function = mappingClassInstance.decodeEntity.bind(mappingClassInstance);
+    const encoder: Function =
+      mappingClassInstance.encodeEntity.bind(mappingClassInstance);
+    const decoder: Function =
+      mappingClassInstance.decodeEntity.bind(mappingClassInstance);
 
     let { pk, newItem, attributes, queryableAttributes, gsiSk1Contains } =
       encoder(entity);

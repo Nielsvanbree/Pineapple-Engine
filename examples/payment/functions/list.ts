@@ -15,6 +15,7 @@ async function list() {
       },
       (params) => {
         console.log("🚀 ~ file: list.js ~ line 9 ~ list ~ params", params);
+
         return params;
       }
     );

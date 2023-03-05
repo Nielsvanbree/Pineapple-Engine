@@ -118,15 +118,28 @@ async function put(params: PutCommandInput) {
 }
 
 async function dynamoUpdatePineapple(
-  TableName: string,
-  pk: string,
-  sk: string,
-  newItem: boolean,
-  attributes?: Record<string, any>,
-  createdAttributes?: Record<string, any>,
-  returnParams: boolean = false,
-  newItemCheck: boolean = true,
-  attributeCallback?: (key: string, value: any) => string
+  {
+    TableName,
+    pk,
+    sk,
+    newItem,
+    attributes,
+    createdAttributes,
+    returnParams = false,
+    newItemCheck = true,
+    attributeCallback
+  }:
+  {
+    TableName: string,
+    pk: string,
+    sk: string,
+    newItem: boolean,
+    attributes?: Record<string, any>,
+    createdAttributes?: Record<string, any>,
+    returnParams: boolean,
+    newItemCheck: boolean,
+    attributeCallback?: (key: string, value: any) => string
+  }
 ): Promise<UpdateCommandInput & Record<string, any>> {
   const params: UpdateCommandInput = {
     TableName,

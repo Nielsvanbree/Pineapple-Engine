@@ -9,25 +9,25 @@ import {
 } from "./tableInterface";
 import { Mapping, iMappingConfig } from "./mapping";
 import { j, validate } from "../helpers/joi";
-import {
-  unpackStreamRecord,
-  DynamoDBRecord,
-} from "../helpers/dynamodb";
+import { unpackStreamRecord, DynamoDBRecord } from "../helpers/dynamodb";
 
 class DynamoDB {
   #mapping: Mapping;
   #tableInterface: TableInterface;
   #schemas: PineappleSchemas;
+  #responseFormat: "V1" | "V2";
 
   constructor(
     {
       tableName,
       entityName,
       idGeneratorFunction,
+      responseFormat,
     }: {
       tableName: string;
       entityName: string;
       idGeneratorFunction?: () => string;
+      responseFormat: "V1" | "V2";
     },
     mappingConfig: iMappingConfig,
     schemas: PineappleSchemas
@@ -61,6 +61,7 @@ class DynamoDB {
     this.#mapping = new Mapping(entityName, mappingConfig, idGeneratorFunction);
     this.#tableInterface = new TableInterface(tableName);
     this.#schemas = schemas;
+    this.#responseFormat = responseFormat;
   }
 
   async get(
@@ -131,13 +132,22 @@ class DynamoDB {
 
     validate(this.#schemas.listEntitySchema, entity, undefined, "interface");
 
-    return this.#tableInterface.listDynamoRecords(
-      entity,
-      this.#mapping,
-      options?.limit,
-      options?.exclusiveStartKey,
-      callback
-    );
+    const { items, lastEvaluatedKey } =
+      await this.#tableInterface.listDynamoRecords(
+        entity,
+        this.#mapping,
+        options?.limit,
+        options?.exclusiveStartKey,
+        callback
+      );
+
+    return {
+      items:
+        this.#responseFormat === "V1"
+          ? items
+          : items.map(({ entity }) => ({ ...entity })),
+      lastEvaluatedKey,
+    };
   }
 
   async update(
