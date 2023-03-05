@@ -1,6 +1,6 @@
 import { Pineapple } from "../../../pineapple";
-import { pineappleConfig } from "../pineappleConfig/index";
-import testEvent from "../testEvents/get.json";
+import { pineappleConfig } from "../pineappleConfigs/payment/index";
+import testEvent from "../testEvents/getPayment.json";
 
 const payment = new Pineapple(pineappleConfig);
 

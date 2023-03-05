@@ -2,15 +2,25 @@ import { ulid } from "ulid";
 class Mapping {
   entityValues: { entity: string };
   #mappingConfig: iMappingConfig;
+  #attachmentIdKeyName: string | undefined;
   #idGeneratorFunction: () => string;
 
-  constructor(entityName: string, mappingConfig: iMappingConfig, idGeneratorFunction: () => string = ulid) {
+  constructor(
+    entityName: string,
+    mappingConfig: iMappingConfig,
+    attachmentIdKeyName: string | undefined,
+    idGeneratorFunction: () => string = ulid
+  ) {
     this.entityValues = { entity: entityName };
     this.#mappingConfig = mappingConfig;
+    this.#attachmentIdKeyName = attachmentIdKeyName;
     this.#idGeneratorFunction = idGeneratorFunction;
   }
 
-  encodeEntity(entity: Record<string, any>, executorUsername?: string): iEncodedEntityResponse {
+  encodeEntity(
+    entity: Record<string, any>,
+    executorUsername?: string,
+  ): iEncodedEntityResponse {
     if (!entity || typeof entity !== "object")
       throw {
         statusCode: 400,
@@ -31,7 +41,7 @@ class Mapping {
       entitySpecificMapping: decodedToEncodedMapping,
       sortKeyConstruction: this.#mappingConfig.sortKeyConstruction,
       queryableAttributesFromEntity: this.#mappingConfig.queryableAttributes,
-      executorUsername
+      executorUsername,
     });
   }
 
@@ -39,49 +49,8 @@ class Mapping {
     return decode(entity, this.#mappingConfig.encodedToDecodedMapping);
   }
 
-  encodeAttachment(
-    attachmentName: string,
-    executorUsername?: string
-  ): (attachment: Record<string, any>) => iEncodedEntityResponse {
-    return (attachment: Record<string, any>): iEncodedEntityResponse => {
-      const {
-        entity,
-        sortKeyConstruction,
-        encodedToDecodedMapping,
-        queryableAttributesForAttachment,
-      } = getAttachmentMapping(
-        attachmentName,
-        this.#mappingConfig.attachmentsMapping
-      );
-      const decodedToEncodedMapping = getReversedMapping(
-        encodedToDecodedMapping
-      );
-
-      attachment.entity = `${this.entityValues.entity}_${entity}`;
-      if (attachment.version === undefined || attachment.version === null)
-        attachment.version = 0;
-
-      return this.#encode({
-        entity: attachment,
-        entitySpecificMapping: decodedToEncodedMapping,
-        sortKeyConstruction,
-        queryableAttributesFromEntity: queryableAttributesForAttachment,
-        executorUsername
-      });
-    };
-  }
-
-  decodeAttachment(
-    attachmentName: string
-  ): (attachment: Record<string, any>) => Record<string, any> {
-    return (attachment: Record<string, any>) => {
-      const { encodedToDecodedMapping } = getAttachmentMapping(
-        attachmentName,
-        this.#mappingConfig.attachmentsMapping
-      );
-
-      return decode(attachment, encodedToDecodedMapping);
-    };
+  get attachmentIdKeyName() {
+    return this.#attachmentIdKeyName;
   }
 
   #encode({
@@ -89,7 +58,7 @@ class Mapping {
     entitySpecificMapping,
     sortKeyConstruction,
     queryableAttributesFromEntity,
-    executorUsername
+    executorUsername,
   }: {
     entity: Record<string, any>;
     entitySpecificMapping: any;
@@ -103,14 +72,23 @@ class Mapping {
         code: "InvalidParameterException",
         message: "Malformed entity object",
       };
-  
+
     const usedMapping = {
       ...entitySpecificMapping,
     };
-  
+
+    let newItem: boolean = false;
+    if (this.#attachmentIdKeyName) {
+      newItem = entity[this.#attachmentIdKeyName] ? false : true;
+      if (newItem)
+        entity[this.#attachmentIdKeyName] = `${
+          this.entityValues.entity
+        }_${this.#idGeneratorFunction()}`;
+    }
+
     encodeEntityAttributes(entity, usedMapping);
 
-    const newItem: boolean = entity.pk ? false : true;
+    newItem = this.#attachmentIdKeyName ? newItem : entity.pk ? false : true;
 
     if (executorUsername) {
       const now = new Date().toISOString();
@@ -135,7 +113,7 @@ class Mapping {
       sortKeyConstruction,
       usedMapping,
     });
-  
+
     return this.#prepEncodedEntityResponse({
       entity,
       gsiSk1Contains,
@@ -143,7 +121,7 @@ class Mapping {
       sortKeyConstruction,
       queryableAttributesFromEntity,
       usedMapping,
-      newItem
+      newItem,
     });
   }
 
@@ -154,7 +132,7 @@ class Mapping {
     sortKeyConstruction,
     queryableAttributesFromEntity,
     usedMapping,
-    newItem
+    newItem,
   }: {
     entity: Record<string, any>;
     gsiSk1Contains: Array<string>;
@@ -165,29 +143,35 @@ class Mapping {
     newItem: boolean;
   }): iEncodedEntityResponse {
     const response: iEncodedEntityResponse = {
-      pk: `${newItem ? `${entity.entity}_${this.#idGeneratorFunction()}` : entity.pk}`,
+      pk: `${
+        newItem && !this.#attachmentIdKeyName
+          ? `${entity.entity}_${this.#idGeneratorFunction()}`
+          : entity.pk
+      }`,
       sk: entity.sk,
       newItem,
       attributes: {},
       creationAttributes: {},
-      queryableAttributes: queryableAttributesFromEntity || QUERYABLE_ATTRIBUTES,
+      queryableAttributes:
+        queryableAttributesFromEntity || QUERYABLE_ATTRIBUTES,
       gsiSk1Contains,
       gsiSk1Misses,
       sortKeyConstruction,
       usedMapping,
     };
-  
+
     delete entity.pk;
     delete entity.sk;
-  
+
     Object.entries(entity).forEach(([key, value]: [string, any]) => {
       if (value !== null && value !== undefined) {
         if (CREATION_ATTRIBUTES.includes(key as CreationAttributes))
           response.creationAttributes[key as CreationAttributes] = value;
-        else if (!KEY_ATTRIBUTES.includes(key)) response.attributes[key] = value;
+        else if (!KEY_ATTRIBUTES.includes(key))
+          response.attributes[key] = value;
       }
     });
-  
+
     return response;
   }
 }
@@ -204,20 +188,6 @@ function decode(
     };
 
   return decodeEntityAttributes(entity, entitySpecificMapping);
-}
-
-function getAttachmentMapping(
-  attachmentName: string,
-  attachmentsMapping: Record<string, any>
-): Record<string, any> {
-  if (!attachmentsMapping[attachmentName])
-    throw {
-      statusCode: 404,
-      code: "ResourceNotFoundException",
-      message: `No attachment with the name ${attachmentName} found`,
-    };
-
-  return attachmentsMapping[attachmentName];
 }
 
 function getReversedMapping(
@@ -373,7 +343,6 @@ interface iMappingConfig {
   encodedToDecodedMapping: iEncodedToDecodedMapping;
   sortKeyConstruction: iSortKeyConstruction;
   queryableAttributes: Array<QueryableAttributes>;
-  attachmentsMapping: any;
 }
 
 export { Mapping, iMappingConfig, QueryableAttributes };

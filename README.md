@@ -32,6 +32,28 @@ const { pineappleConfig } = require("../pineappleConfig/index");
 const Entity = new Pineapple(pineappleConfig);
 ```
 
+## Table of Contents
+- [Pineapple Engine](#pineapple-engine)
+  - [Installation](#installation)
+  - [Import](#import)
+  - [Table of Contents](#table-of-contents)
+  - [Usage](#usage)
+    - [Global config](#global-config)
+    - [Mapping config](#mapping-config)
+    - [Schemas](#schemas)
+    - [Grouping configs together](#grouping-configs-together)
+  - [Working With DynamoDB Streams](#working-with-dynamodb-streams)
+  - [Pineapple Utils](#pineapple-utils)
+  - [Pineapple Joi](#pineapple-joi)
+  - [Pineapple single-table design](#pineapple-single-table-design)
+    - [Global Secondary Indexes](#global-secondary-indexes)
+    - [GSI overloading](#gsi-overloading)
+    - [Composite sortkey design](#composite-sortkey-design)
+    - [Adjacency list design patterns](#adjacency-list-design-patterns)
+    - [ULID versionig system](#ulid-versionig-system)
+  - [Attachment Entities](#attachment-entities)
+  - [Future Products](#future-products)
+
 ## Usage
 First, think of your entity:
 - What is its name and purpose within the application?
@@ -57,7 +79,8 @@ const globalConfig: iGlobalConfig = {
   entityName: "payment",
   dataSource: "dynamodb", // Currently the only supported source
   tableName: "fruitful-development-pineapple-provisioned", // Replace with your own table name
-  idGeneratorFunction: uuidv4 // Optional: overwrite the automatically generated id by Pineapple Engine (we use a ULID) by your own function to generate a unique id, such as a uuid
+  idGeneratorFunction: uuidv4, // Optional: overwrite the automatically generated id by Pineapple Engine (we use a ULID) by your own function to generate a unique id, such as a uuid
+  rootEntity: true // Terminology from domain driven design, the root entity is the entity controlling sub-entities, which we call attachment entities within Pineapple
 }
 
 export { globalConfig };
@@ -83,7 +106,6 @@ const mappingConfig: iMappingConfig = {
     gsiSk1: ["entity", "productId", "status"],
   },
   queryableAttributes: ["pk", "gsiPk1", "gsiPk2", "entity"], // Because the order of the array determines the priority of the attribute when querying, this config will overwrite the global priority config -> Use this when certain patterns are more efficient than others for this entity
-  attachmentsMapping: {} // Currently in alpha mode: not reccommended for use yet
 }
 
 export { mappingConfig };
@@ -506,6 +528,100 @@ Now if there is another update to this payment object, the stream will create a 
   - Currently the exact same as version_0 (version 01GEFSWHM36ZMC3V2C8JFZV1R3 is now outdated and is still there for a history lookup if needed)
   - versionNumber = 2
 
+## Attachment Entities
+When you're working with more advanced patterns, attachment entities should be used. Think about a shopping cart where you can add multiple products. The cartInfo entity that stored information about the general cart would be the root entity, while each product record would be an entity attachment belonging to the cartInfo root entity.
+
+Within Pineapple Engine, 1 extra configuration for an attachment entity is necessary to place within the global config: attachmentIdKeyName. This is the key of the id that uniquely identifies a certain attachment. With this extra information, the Pineapple Engine knows what to do. In the example below, a paymentMethodId is the unique identifier for the entity attachment named paymentMethod. 
+
+```javascript
+import { iGlobalConfig } from "../../../../pineapple";
+
+const globalConfig: iGlobalConfig = {
+  entityName: "paymentMethod",
+  dataSource: "dynamodb",
+  tableName: "fruitful-development-pineapple-prov",
+  responseFormat: "V2",
+  rootEntity: false,
+  attachmentIdKeyName: "paymentMethodId"
+}
+
+export { globalConfig };
+```
+
+The entity attachment will be connected to the root entity through the same pk, so make sure the schema of your entity attachment matches that of the root entity you're trying to connect it too within your application. The paymentMethod schema file could look like the schema file below, where it's attached to the payment entity because paymentId is the partition key for the root entity payment.
+
+```javascript
+import { j, metaInfoSchema, prefixedUlid } from "../../../../helpers/joi";
+import { isValidUlid } from "../../../../helpers/utils";
+
+const paymentId = j
+  .string()
+  .regex(/^payment_/)
+  .custom(prefixedUlid);
+const paymentMethodId = j
+  .string()
+  .regex(/^paymentMethod_/)
+  .custom(prefixedUlid);
+const paymentMethodType = j.string().valid("card", "ideal");
+const status = j.string().valid("active", "inActive");
+
+const createSchema = j
+  .object()
+  .keys({
+    paymentId: paymentId.required(),
+    status: status.default("active"),
+    paymentMethodType: paymentMethodType.required(),
+  })
+  .default({});
+
+const updateSchema = j.object().keys({
+  paymentId: paymentId.required(),
+  paymentMethodId: paymentMethodId.required(),
+  status: status.required(),
+});
+
+const getSchema = j.object().keys({
+  paymentId: paymentId.required(),
+  paymentMethodId: paymentMethodId.required(),
+  version: [
+    j.number().valid(0),
+    j.string().custom((value) => {
+      if (!isValidUlid(value)) throw new Error("version is not a valid ULID");
+    }),
+  ],
+});
+
+const listEntitySchema = j.object().keys({
+  status,
+  paymentMethodType,
+  paymentId
+});
+
+const interfaceUpdateSchema = updateSchema.fork([], (schema) =>
+  schema.required()
+);
+
+const interfaceCreateSchema = createSchema
+  .fork([], (schema) => schema.required());
+
+// Schema should be used at: output.
+// The output of an entity is always the creation schema + the automatically generated userId & meta information on creation.
+const outputEntitySchema = createSchema
+  .append({
+    paymentMethodId,
+  })
+  .concat(metaInfoSchema);
+
+export {
+  createSchema,
+  updateSchema,
+  getSchema,
+  listEntitySchema,
+  outputEntitySchema,
+  interfaceUpdateSchema,
+  interfaceCreateSchema,
+};
+```
 
 ## Future Products
 Pineapple is currently still in development and will be extended with more products in the future. The first being a CLI to easily setup a Pineapple table and add a new backend or frontend entity with TypeScript or JavaScript. The CLI will also offer some integrations with other Cloud products to store additional data or sync existing data to, such as AWS S3 or Elasticsearch.

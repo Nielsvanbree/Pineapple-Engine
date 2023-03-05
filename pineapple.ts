@@ -5,7 +5,15 @@ class Pineapple {
   #dynamodb: DynamoDB;
 
   constructor({
-    globalConfig: { dataSource, tableName, entityName, idGeneratorFunction },
+    globalConfig: {
+      dataSource,
+      tableName,
+      entityName,
+      idGeneratorFunction,
+      responseFormat,
+      rootEntity,
+      attachmentIdKeyName,
+    },
     mappingConfig,
     schemas,
   }: {
@@ -13,9 +21,20 @@ class Pineapple {
     mappingConfig: iMappingConfig;
     schemas: any;
   }) {
+    if (!rootEntity && !attachmentIdKeyName)
+      throw new Error(
+        "Please specify the unique attachmentIdKeyName as this is mandatory for a non root entity"
+      );
+
     if (dataSource === "dynamodb")
       this.#dynamodb = new DynamoDB(
-        { tableName, entityName, idGeneratorFunction },
+        {
+          tableName,
+          entityName,
+          idGeneratorFunction,
+          responseFormat: responseFormat || "V1",
+          attachmentIdKeyName
+        },
         mappingConfig,
         schemas
       );
@@ -32,10 +51,9 @@ interface iGlobalConfig {
   dataSource: string;
   tableName: string;
   idGeneratorFunction?: () => string;
+  responseFormat?: "V1" | "V2";
+  rootEntity: boolean;
+  attachmentIdKeyName?: string;
 }
 
-export {
-  Pineapple,
-  iMappingConfig,
-  iGlobalConfig,
-};
+export { Pineapple, iMappingConfig, iGlobalConfig };
