@@ -312,4 +312,4 @@ type PineappleSchemaNames =
 
 type PineappleSchemas = { [key in PineappleSchemaNames]: j.ObjectSchema };
 
-export { DynamoDB };
+export { DynamoDB, PineappleSchemas };
