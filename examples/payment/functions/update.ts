@@ -1,5 +1,5 @@
 import { Pineapple } from "../../../pineapple";
-import { pineappleConfig } from "../pineappleConfig/index";
+import { pineappleConfig } from "../pineappleConfigs/payment/index";
 import testEventUpdate from "../testEvents/update.json";
 import testEventCreate from "../testEvents/create.json";
 
