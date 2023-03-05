@@ -1,9 +1,44 @@
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+**Table of Contents**  *generated with [DocToc](https://github.com/thlorenz/doctoc)*
+
+- [Changelog](#changelog)
+  - [\[2.0.0\] - 2023-03-05](#200---2023-03-05)
+    - [Changed](#changed)
+    - [Fixed](#fixed)
+  - [\[1.2.1\] - 2022-10-12](#121---2022-10-12)
+    - [Fixed](#fixed-1)
+  - [\[1.2.0\] - 2022-10-24](#120---2022-10-24)
+    - [Added](#added)
+  - [\[1.1.2\] - 2022-10-12](#112---2022-10-12)
+    - [Fixed](#fixed-2)
+  - [\[1.1.1\] - 2022-10-12](#111---2022-10-12)
+    - [Added](#added-1)
+    - [Fixed](#fixed-3)
+  - [\[1.1.0\] - 2022-10-12](#110---2022-10-12)
+    - [Added](#added-2)
+    - [Changed](#changed-1)
+  - [\[1.0.0\] - 2022-10-04](#100---2022-10-04)
+    - [Added](#added-3)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 # Changelog
 
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [2.0.0] - 2023-03-05
+Pineapple Engine V2 mainly focuses on attachment entity features. In V1, the attachment feature was expiremental and quite clunky to use. V2 offers full attachment support and in a much cleaner way. Some other smaller changes & fixes have also been implemented. 
+### Changed
+- Attachments now work through a global config attachmentIdKeyName, while the experimental old way of working with attachments is deprecated
+- The output of the list is changed to make it easier to work with. Use responseFormat: "V2" in the global config to make use of this change. It's not automatically set to "V2" to prevent breaking changes from 1.x
+
+### Fixed
+- Joi schema defaults & casts were not working, because the changes in the validation step never got send to the methods.
+- When there was an error in the update call, it was not thrown as an error. It now throws as an actual error.
 
 ## [1.2.1] - 2022-10-12
 
