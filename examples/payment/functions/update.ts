@@ -1,13 +1,14 @@
 import { Pineapple } from "../../../pineapple";
 import { pineappleConfig } from "../pineappleConfig/index";
-import testEvent from "../testEvents/update.json";
+import testEventUpdate from "../testEvents/update.json";
+import testEventCreate from "../testEvents/create.json";
 
 const payment = new Pineapple(pineappleConfig);
 
 async function update() {
   try {
     const { entity: newPayment } = await payment.dynamodb.update(
-      { ...testEvent, userId: "niels" },
+      { ...testEventCreate, userId: "nielsinhoooooo" },
       { executorUsername: "Niels" },
       (params) => {
         console.log("params", params);
