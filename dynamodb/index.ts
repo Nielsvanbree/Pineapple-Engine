@@ -23,11 +23,13 @@ class DynamoDB {
       entityName,
       idGeneratorFunction,
       responseFormat,
+      attachmentId,
     }: {
       tableName: string;
       entityName: string;
       idGeneratorFunction?: () => string;
       responseFormat: "V1" | "V2";
+      attachmentId?: string;
     },
     mappingConfig: iMappingConfig,
     schemas: PineappleSchemas
@@ -58,7 +60,7 @@ class DynamoDB {
       }
     );
 
-    this.#mapping = new Mapping(entityName, mappingConfig, idGeneratorFunction);
+    this.#mapping = new Mapping(entityName, mappingConfig, attachmentId, idGeneratorFunction);
     this.#tableInterface = new TableInterface(tableName);
     this.#schemas = schemas;
     this.#responseFormat = responseFormat;
@@ -103,9 +105,9 @@ class DynamoDB {
       );
 
     this.#validateRequiredSchemaForFunction("getSchema");
-    validate(this.#schemas.getSchema, entity, undefined, "interface");
+    const validatedEntity = validate(this.#schemas.getSchema, entity, undefined, "interface");
 
-    return this.#tableInterface.getDynamoRecord(entity, this.#mapping);
+    return this.#tableInterface.getDynamoRecord(validatedEntity, this.#mapping);
   }
 
   async list(
@@ -130,14 +132,15 @@ class DynamoDB {
       }
     );
 
-    validate(this.#schemas.listEntitySchema, entity, undefined, "interface");
+    const validatedEntity = validate(this.#schemas.listEntitySchema, entity, undefined, "interface");
 
     const { items, lastEvaluatedKey } =
       await this.#tableInterface.listDynamoRecords(
-        entity,
+        validatedEntity,
         this.#mapping,
         options?.limit,
         options?.exclusiveStartKey,
+        this.#mapping.attachmentId,
         callback
       );
 
@@ -201,10 +204,10 @@ class DynamoDB {
       entity,
     };
 
-    validate(schema, input, undefined, "interface");
+    const { entity: validatedEntity } = validate(schema, input, undefined, "interface");
 
     return this.#tableInterface.updateDynamoRecord(
-      entity,
+      validatedEntity,
       this.#mapping,
       options.executorUsername,
       callback
@@ -267,10 +270,10 @@ class DynamoDB {
     exclusiveStartKey?: string | any
   ): Promise<iListAllVersionsForEntityResponse> {
     this.#validateRequiredSchemaForFunction("getSchema");
-    validate(this.#schemas.getSchema, entity, undefined, "interface");
+    const validatedEntity = validate(this.#schemas.getSchema, entity, undefined, "interface");
 
     return this.#tableInterface.listAllVersionsForEntity(
-      entity,
+      validatedEntity,
       this.#mapping,
       limit,
       exclusiveStartKey
@@ -293,6 +296,7 @@ function validateSchemasAreJoiSchemas(schemas: PineappleSchemas): void {
       return !j.isSchema(schema) ? schemaName : undefined;
     })
     .filter((s) => s);
+
   if (faultySchemas?.length > 0)
     throw new Error(
       `Invalid Joi schemas detected while trying to construct Pineapple entity: ${faultySchemas.join(

@@ -237,6 +237,7 @@ class TableInterface {
     mappingClassInstance: Mapping,
     Limit?: number,
     exclusiveStartKey?: string | any,
+    attachmentId?: string | undefined,
     callback?: (params: QueryCommandInput) => QueryCommandInput
   ): Promise<iListDynamoRecordsResponse> {
     exclusiveStartKey = decodeExclusiveStartKey(exclusiveStartKey);
@@ -245,11 +246,15 @@ class TableInterface {
     const decoder: Function =
       mappingClassInstance.decodeEntity.bind(mappingClassInstance);
 
+    const attachmentIdPresent = attachmentId && entity[attachmentId] ? true : false;
+
     let { pk, newItem, attributes, queryableAttributes, gsiSk1Contains } =
       encoder(entity);
 
     // If newItem is true it means there was no pk to query for, but one was generated automatically
     if (!newItem) attributes = { pk, ...attributes };
+    if (attachmentId && !attachmentIdPresent) delete attributes[attachmentId];
+    if (attachmentId && pk && pk !== "undefined") attributes.pk = pk;
 
     const { keyName, indexName } = getKeyAndIndexToUse(
       attributes,
