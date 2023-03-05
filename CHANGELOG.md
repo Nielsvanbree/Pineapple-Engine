@@ -1,7 +1,3 @@
-<!-- START doctoc generated TOC please keep comment here to allow auto update -->
-<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
-**Table of Contents**  *generated with [DocToc](https://github.com/thlorenz/doctoc)*
-
 - [Changelog](#changelog)
   - [\[2.0.0\] - 2023-03-05](#200---2023-03-05)
     - [Changed](#changed)
@@ -21,7 +17,6 @@
   - [\[1.0.0\] - 2022-10-04](#100---2022-10-04)
     - [Added](#added-3)
 
-<!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
 # Changelog
 
