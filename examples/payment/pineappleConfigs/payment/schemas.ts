@@ -1,5 +1,5 @@
-import { j, metaInfoSchema, prefixedUlid } from "../../../helpers/joi";
-import { isValidUlid } from "../../../helpers/utils";
+import { j, metaInfoSchema, prefixedUlid } from "../../../../helpers/joi";
+import { isValidUlid } from "../../../../helpers/utils";
 
 // Base schema for the entity, but without an id so we can create an update & create schema from here.
 // This schema shouldn't contain all elements that can be created, but should only contain queryable & filterable attributes. Extend the create & update schemas with the other fields.
@@ -86,9 +86,6 @@ const listEntitySchema = baseEntitySchemaWithoutId.fork([], (schema) =>
   schema.required()
 );
 
-// Schema should be used at: input & interface.
-const listAttachmentsSchema = j.object().keys({});
-
 // Schema should be used at: output.
 // The output of an entity is always the creation schema + the automatically generated userId & meta information on creation.
 const outputEntitySchema = createSchema
@@ -102,7 +99,6 @@ export {
   updateSchema,
   getSchema,
   listEntitySchema,
-  listAttachmentsSchema,
   outputEntitySchema,
   interfaceUpdateSchema,
   interfaceCreateSchema,

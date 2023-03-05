@@ -6,30 +6,30 @@ import {
   iListAllVersionsForEntityResponse,
   iUpdateDynamoRecordResponse,
   iListDynamoRecordsResponse,
-  iListAttachmentsForEntityResponse,
 } from "./tableInterface";
 import { Mapping, iMappingConfig } from "./mapping";
 import { j, validate } from "../helpers/joi";
-import {
-  unpackStreamRecord,
-  DynamoDBRecord,
-  AttributeValue,
-} from "../helpers/dynamodb";
+import { unpackStreamRecord, DynamoDBRecord } from "../helpers/dynamodb";
 
 class DynamoDB {
   #mapping: Mapping;
   #tableInterface: TableInterface;
   #schemas: PineappleSchemas;
+  #responseFormat: "V1" | "V2";
 
   constructor(
     {
       tableName,
       entityName,
       idGeneratorFunction,
+      responseFormat,
+      attachmentIdKeyName,
     }: {
       tableName: string;
       entityName: string;
       idGeneratorFunction?: () => string;
+      responseFormat: "V1" | "V2";
+      attachmentIdKeyName?: string;
     },
     mappingConfig: iMappingConfig,
     schemas: PineappleSchemas
@@ -60,9 +60,10 @@ class DynamoDB {
       }
     );
 
-    this.#mapping = new Mapping(entityName, mappingConfig, idGeneratorFunction);
+    this.#mapping = new Mapping(entityName, mappingConfig, attachmentIdKeyName, idGeneratorFunction);
     this.#tableInterface = new TableInterface(tableName);
     this.#schemas = schemas;
+    this.#responseFormat = responseFormat;
   }
 
   async get(
@@ -104,9 +105,9 @@ class DynamoDB {
       );
 
     this.#validateRequiredSchemaForFunction("getSchema");
-    validate(this.#schemas.getSchema, entity, undefined, "interface");
+    const validatedEntity = validate(this.#schemas.getSchema, entity, undefined, "interface");
 
-    return this.#tableInterface.getDynamoRecord(entity, this.#mapping);
+    return this.#tableInterface.getDynamoRecord(validatedEntity, this.#mapping);
   }
 
   async list(
@@ -131,40 +132,25 @@ class DynamoDB {
       }
     );
 
-    validate(this.#schemas.listEntitySchema, entity, undefined, "interface");
+    const validatedEntity = validate(this.#schemas.listEntitySchema, entity, undefined, "interface");
 
-    return this.#tableInterface.listDynamoRecords(
-      entity,
-      this.#mapping,
-      options?.limit,
-      options?.exclusiveStartKey,
-      callback
-    );
-  }
+    const { items, lastEvaluatedKey } =
+      await this.#tableInterface.listDynamoRecords(
+        validatedEntity,
+        this.#mapping,
+        options?.limit,
+        options?.exclusiveStartKey,
+        this.#mapping.attachmentIdKeyName,
+        callback
+      );
 
-  async listAttachmentsForEntity(
-    entityId: string,
-    attachment: Record<string, any>,
-    limit: number,
-    exclusiveStartKey: string | any,
-    callback: (params: QueryCommandInput) => QueryCommandInput
-  ): Promise<iListAttachmentsForEntityResponse> {
-    this.#validateRequiredSchemaForFunction("listAttachmentsSchema");
-    validate(
-      this.#schemas.listAttachmentsSchema,
-      { attachment },
-      undefined,
-      "interface"
-    );
-
-    return this.#tableInterface.listAttachmentsForEntity(
-      entityId,
-      attachment,
-      this.#mapping,
-      limit,
-      exclusiveStartKey,
-      callback
-    );
+    return {
+      items:
+        this.#responseFormat === "V1"
+          ? items
+          : items.map(({ entity }) => ({ ...entity })),
+      lastEvaluatedKey,
+    };
   }
 
   async update(
@@ -218,10 +204,10 @@ class DynamoDB {
       entity,
     };
 
-    validate(schema, input, undefined, "interface");
+    const { entity: validatedEntity } = validate(schema, input, undefined, "interface");
 
     return this.#tableInterface.updateDynamoRecord(
-      entity,
+      validatedEntity,
       this.#mapping,
       options.executorUsername,
       callback
@@ -284,10 +270,10 @@ class DynamoDB {
     exclusiveStartKey?: string | any
   ): Promise<iListAllVersionsForEntityResponse> {
     this.#validateRequiredSchemaForFunction("getSchema");
-    validate(this.#schemas.getSchema, entity, undefined, "interface");
+    const validatedEntity = validate(this.#schemas.getSchema, entity, undefined, "interface");
 
     return this.#tableInterface.listAllVersionsForEntity(
-      entity,
+      validatedEntity,
       this.#mapping,
       limit,
       exclusiveStartKey
@@ -310,6 +296,7 @@ function validateSchemasAreJoiSchemas(schemas: PineappleSchemas): void {
       return !j.isSchema(schema) ? schemaName : undefined;
     })
     .filter((s) => s);
+
   if (faultySchemas?.length > 0)
     throw new Error(
       `Invalid Joi schemas detected while trying to construct Pineapple entity: ${faultySchemas.join(
@@ -324,7 +311,6 @@ type PineappleSchemaNames =
   | "getSchema"
   | "interfaceCreateSchema"
   | "interfaceUpdateSchema"
-  | "listAttachmentsSchema"
   | "listEntitySchema"
   | "outputEntitySchema";
 
