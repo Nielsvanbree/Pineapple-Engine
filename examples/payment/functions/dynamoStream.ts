@@ -1,7 +1,7 @@
 import { Pineapple } from "../../../pineapple";
 import { addNewVersion } from "../../../helpers/utils";
 import { DynamoDBRecord } from "../../../helpers/dynamodb";
-import { pineappleConfig } from "../pineappleConfig/index";
+import { pineappleConfig } from "../pineappleConfigs/payment/index";
 import { Records } from "../testEvents/dynamoStream.json";
 
 const TABLE_NAME = "fruitful-development-pineapple-prov"; // Replace with your table name, e.g. through environment variables

@@ -2,15 +2,25 @@ import { ulid } from "ulid";
 class Mapping {
   entityValues: { entity: string };
   #mappingConfig: iMappingConfig;
+  #attachmentId: string | undefined;
   #idGeneratorFunction: () => string;
 
-  constructor(entityName: string, mappingConfig: iMappingConfig, idGeneratorFunction: () => string = ulid) {
+  constructor(
+    entityName: string,
+    mappingConfig: iMappingConfig,
+    attachmentId: string | undefined,
+    idGeneratorFunction: () => string = ulid
+  ) {
     this.entityValues = { entity: entityName };
     this.#mappingConfig = mappingConfig;
+    this.#attachmentId = attachmentId;
     this.#idGeneratorFunction = idGeneratorFunction;
   }
 
-  encodeEntity(entity: Record<string, any>, executorUsername?: string): iEncodedEntityResponse {
+  encodeEntity(
+    entity: Record<string, any>,
+    executorUsername?: string,
+  ): iEncodedEntityResponse {
     if (!entity || typeof entity !== "object")
       throw {
         statusCode: 400,
@@ -31,7 +41,7 @@ class Mapping {
       entitySpecificMapping: decodedToEncodedMapping,
       sortKeyConstruction: this.#mappingConfig.sortKeyConstruction,
       queryableAttributesFromEntity: this.#mappingConfig.queryableAttributes,
-      executorUsername
+      executorUsername,
     });
   }
 
@@ -39,12 +49,16 @@ class Mapping {
     return decode(entity, this.#mappingConfig.encodedToDecodedMapping);
   }
 
+  get attachmentId() {
+    return this.#attachmentId;
+  }
+
   #encode({
     entity,
     entitySpecificMapping,
     sortKeyConstruction,
     queryableAttributesFromEntity,
-    executorUsername
+    executorUsername,
   }: {
     entity: Record<string, any>;
     entitySpecificMapping: any;
@@ -58,14 +72,23 @@ class Mapping {
         code: "InvalidParameterException",
         message: "Malformed entity object",
       };
-  
+
     const usedMapping = {
       ...entitySpecificMapping,
     };
-  
+
+    let newItem: boolean = false;
+    if (this.#attachmentId) {
+      newItem = entity[this.#attachmentId] ? false : true;
+      if (newItem)
+        entity[this.#attachmentId] = `${
+          this.entityValues.entity
+        }_${this.#idGeneratorFunction()}`;
+    }
+
     encodeEntityAttributes(entity, usedMapping);
 
-    const newItem: boolean = entity.pk ? false : true;
+    newItem = this.#attachmentId ? newItem : entity.pk ? false : true;
 
     if (executorUsername) {
       const now = new Date().toISOString();
@@ -90,7 +113,7 @@ class Mapping {
       sortKeyConstruction,
       usedMapping,
     });
-  
+
     return this.#prepEncodedEntityResponse({
       entity,
       gsiSk1Contains,
@@ -98,7 +121,7 @@ class Mapping {
       sortKeyConstruction,
       queryableAttributesFromEntity,
       usedMapping,
-      newItem
+      newItem,
     });
   }
 
@@ -109,7 +132,7 @@ class Mapping {
     sortKeyConstruction,
     queryableAttributesFromEntity,
     usedMapping,
-    newItem
+    newItem,
   }: {
     entity: Record<string, any>;
     gsiSk1Contains: Array<string>;
@@ -120,29 +143,35 @@ class Mapping {
     newItem: boolean;
   }): iEncodedEntityResponse {
     const response: iEncodedEntityResponse = {
-      pk: `${newItem ? `${entity.entity}_${this.#idGeneratorFunction()}` : entity.pk}`,
+      pk: `${
+        newItem && !this.#attachmentId
+          ? `${entity.entity}_${this.#idGeneratorFunction()}`
+          : entity.pk
+      }`,
       sk: entity.sk,
       newItem,
       attributes: {},
       creationAttributes: {},
-      queryableAttributes: queryableAttributesFromEntity || QUERYABLE_ATTRIBUTES,
+      queryableAttributes:
+        queryableAttributesFromEntity || QUERYABLE_ATTRIBUTES,
       gsiSk1Contains,
       gsiSk1Misses,
       sortKeyConstruction,
       usedMapping,
     };
-  
+
     delete entity.pk;
     delete entity.sk;
-  
+
     Object.entries(entity).forEach(([key, value]: [string, any]) => {
       if (value !== null && value !== undefined) {
         if (CREATION_ATTRIBUTES.includes(key as CreationAttributes))
           response.creationAttributes[key as CreationAttributes] = value;
-        else if (!KEY_ATTRIBUTES.includes(key)) response.attributes[key] = value;
+        else if (!KEY_ATTRIBUTES.includes(key))
+          response.attributes[key] = value;
       }
     });
-  
+
     return response;
   }
 }

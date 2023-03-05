@@ -1,6 +1,6 @@
 import { Pineapple } from "../../../pineapple";
-import { pineappleConfig } from "../pineappleConfig/index";
-import testEvent from "../testEvents/get.json";
+import { pineappleConfig } from "../pineappleConfigs/payment/index";
+import testEvent from "../testEvents/getPayment.json";
 
 const payment = new Pineapple(pineappleConfig);
 
@@ -37,7 +37,7 @@ async function get() {
   }
 }
 
-getWithVersions().then(res => {
+get().then(res => {
   console.log("🚀 ~ file: get.js ~ line 15 ~ get ~ res", res);
 }).catch(err => {
   console.error("🚀 ~ file: get.js ~ line 17 ~ get ~ err", err);

@@ -1,17 +1,16 @@
 import { Pineapple } from "../../../pineapple";
-import { pineappleConfig } from "../pineappleConfig/index";
-import testEvent from "../testEvents/list.json";
+import { pineappleConfig } from "../pineappleConfigs/paymentMethod/index";
+import testEvent from "../testEvents/listPaymentMethod.json";
 
-const payment = new Pineapple(pineappleConfig);
+const paymentMethod = new Pineapple(pineappleConfig);
 
 async function list() {
   try {
-    const { items, lastEvaluatedKey } = await payment.dynamodb.list(
+    const { items, lastEvaluatedKey } = await paymentMethod.dynamodb.list(
       testEvent,
       {
         limit: 1,
-        exclusiveStartKey:
-          "eyJzayI6InBheW1lbnQjdmVyc2lvbl8wIiwiZ3NpU2sxIjoicGF5bWVudCNwcm9kdWN0XzAxR0VDWkpINjhIMURHMENHN1dDR1oyODE4I2V4cGlyZWQiLCJnc2lQazEiOiJvcmRlcl8wMUdFQ1pORllBWkhKVlMyQzhIQTdQQllTUCIsInBrIjoicGF5bWVudF8wMUdFQ1pQODlXQTFFTjhWRkVRSDVZMU5SQiJ9",
+        exclusiveStartKey: "eyJwayI6InBheW1lbnRfMDFHRUNaUDg5V0ExRU44VkZFUUg1WTFOUkIiLCJzayI6InBheW1lbnRNZXRob2QjcGF5bWVudE1ldGhvZF8wMUdUU0FENjZDSFE3RFRDRDU2TU5BOFhaVyN2ZXJzaW9uXzAiLCJnc2lTazEiOiJwYXltZW50TWV0aG9kI2FjdGl2ZSJ9"
       },
       (params) => {
         console.log("🚀 ~ file: list.js ~ line 9 ~ list ~ params", params);
