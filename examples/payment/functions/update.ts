@@ -8,10 +8,11 @@ const payment = new Pineapple(pineappleConfig);
 async function update() {
   try {
     const { entity: newPayment } = await payment.dynamodb.update(
-      { ...testEventCreate, userId: "nielsinhoooooo" },
-      { executorUsername: "Niels" },
+      { ...testEventUpdate, userId: "Nielseyo" },
+      { executorUsername: "Nielsinho" },
       (params) => {
         console.log("params", params);
+
         return params;
       }
     );

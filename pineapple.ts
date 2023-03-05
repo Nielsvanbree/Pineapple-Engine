@@ -5,7 +5,7 @@ class Pineapple {
   #dynamodb: DynamoDB;
 
   constructor({
-    globalConfig: { dataSource, tableName, entityName, idGeneratorFunction },
+    globalConfig: { dataSource, tableName, entityName, idGeneratorFunction, responseFormat },
     mappingConfig,
     schemas,
   }: {
@@ -15,7 +15,7 @@ class Pineapple {
   }) {
     if (dataSource === "dynamodb")
       this.#dynamodb = new DynamoDB(
-        { tableName, entityName, idGeneratorFunction },
+        { tableName, entityName, idGeneratorFunction, responseFormat: responseFormat || "V1" },
         mappingConfig,
         schemas
       );
@@ -32,6 +32,7 @@ interface iGlobalConfig {
   dataSource: string;
   tableName: string;
   idGeneratorFunction?: () => string;
+  responseFormat?: "V1" | "V2";
 }
 
 export {
