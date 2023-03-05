@@ -6,14 +6,12 @@ import {
   iListAllVersionsForEntityResponse,
   iUpdateDynamoRecordResponse,
   iListDynamoRecordsResponse,
-  iListAttachmentsForEntityResponse,
 } from "./tableInterface";
 import { Mapping, iMappingConfig } from "./mapping";
 import { j, validate } from "../helpers/joi";
 import {
   unpackStreamRecord,
   DynamoDBRecord,
-  AttributeValue,
 } from "../helpers/dynamodb";
 
 class DynamoDB {
@@ -138,31 +136,6 @@ class DynamoDB {
       this.#mapping,
       options?.limit,
       options?.exclusiveStartKey,
-      callback
-    );
-  }
-
-  async listAttachmentsForEntity(
-    entityId: string,
-    attachment: Record<string, any>,
-    limit: number,
-    exclusiveStartKey: string | any,
-    callback: (params: QueryCommandInput) => QueryCommandInput
-  ): Promise<iListAttachmentsForEntityResponse> {
-    this.#validateRequiredSchemaForFunction("listAttachmentsSchema");
-    validate(
-      this.#schemas.listAttachmentsSchema,
-      { attachment },
-      undefined,
-      "interface"
-    );
-
-    return this.#tableInterface.listAttachmentsForEntity(
-      entityId,
-      attachment,
-      this.#mapping,
-      limit,
-      exclusiveStartKey,
       callback
     );
   }
@@ -324,7 +297,6 @@ type PineappleSchemaNames =
   | "getSchema"
   | "interfaceCreateSchema"
   | "interfaceUpdateSchema"
-  | "listAttachmentsSchema"
   | "listEntitySchema"
   | "outputEntitySchema";
 

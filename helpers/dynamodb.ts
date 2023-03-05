@@ -125,7 +125,6 @@ async function dynamoUpdatePineapple(
   attributes?: Record<string, any>,
   createdAttributes?: Record<string, any>,
   returnParams: boolean = false,
-  sameItemCheck: boolean = true,
   newItemCheck: boolean = true,
   attributeCallback?: (key: string, value: any) => string
 ): Promise<UpdateCommandInput & Record<string, any>> {
@@ -154,7 +153,7 @@ async function dynamoUpdatePineapple(
     if (newItemCheck)
       params.ConditionExpression =
         "attribute_not_exists(pk) AND attribute_not_exists(sk)";
-  } else if (!newItem && sameItemCheck)
+  } else if (!newItem)
     params.ConditionExpression =
       "attribute_exists(pk) AND attribute_exists(sk)";
 

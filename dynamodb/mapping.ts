@@ -39,51 +39,6 @@ class Mapping {
     return decode(entity, this.#mappingConfig.encodedToDecodedMapping);
   }
 
-  encodeAttachment(
-    attachmentName: string,
-    executorUsername?: string
-  ): (attachment: Record<string, any>) => iEncodedEntityResponse {
-    return (attachment: Record<string, any>): iEncodedEntityResponse => {
-      const {
-        entity,
-        sortKeyConstruction,
-        encodedToDecodedMapping,
-        queryableAttributesForAttachment,
-      } = getAttachmentMapping(
-        attachmentName,
-        this.#mappingConfig.attachmentsMapping
-      );
-      const decodedToEncodedMapping = getReversedMapping(
-        encodedToDecodedMapping
-      );
-
-      attachment.entity = `${this.entityValues.entity}_${entity}`;
-      if (attachment.version === undefined || attachment.version === null)
-        attachment.version = 0;
-
-      return this.#encode({
-        entity: attachment,
-        entitySpecificMapping: decodedToEncodedMapping,
-        sortKeyConstruction,
-        queryableAttributesFromEntity: queryableAttributesForAttachment,
-        executorUsername
-      });
-    };
-  }
-
-  decodeAttachment(
-    attachmentName: string
-  ): (attachment: Record<string, any>) => Record<string, any> {
-    return (attachment: Record<string, any>) => {
-      const { encodedToDecodedMapping } = getAttachmentMapping(
-        attachmentName,
-        this.#mappingConfig.attachmentsMapping
-      );
-
-      return decode(attachment, encodedToDecodedMapping);
-    };
-  }
-
   #encode({
     entity,
     entitySpecificMapping,
@@ -204,20 +159,6 @@ function decode(
     };
 
   return decodeEntityAttributes(entity, entitySpecificMapping);
-}
-
-function getAttachmentMapping(
-  attachmentName: string,
-  attachmentsMapping: Record<string, any>
-): Record<string, any> {
-  if (!attachmentsMapping[attachmentName])
-    throw {
-      statusCode: 404,
-      code: "ResourceNotFoundException",
-      message: `No attachment with the name ${attachmentName} found`,
-    };
-
-  return attachmentsMapping[attachmentName];
 }
 
 function getReversedMapping(
@@ -373,7 +314,6 @@ interface iMappingConfig {
   encodedToDecodedMapping: iEncodedToDecodedMapping;
   sortKeyConstruction: iSortKeyConstruction;
   queryableAttributes: Array<QueryableAttributes>;
-  attachmentsMapping: any;
 }
 
 export { Mapping, iMappingConfig, QueryableAttributes };

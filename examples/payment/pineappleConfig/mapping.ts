@@ -13,7 +13,6 @@ const mappingConfig: iMappingConfig = {
   },
   // Because the order of the array determines the priority of the attribute when querying, this config will overwrite the global priority config
   queryableAttributes: ["pk", "gsiPk1", "gsiPk2", "entity"],
-  attachmentsMapping: {}
 }
 
 export { mappingConfig };
