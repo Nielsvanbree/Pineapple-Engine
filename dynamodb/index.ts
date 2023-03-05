@@ -23,13 +23,13 @@ class DynamoDB {
       entityName,
       idGeneratorFunction,
       responseFormat,
-      attachmentId,
+      attachmentIdKeyName,
     }: {
       tableName: string;
       entityName: string;
       idGeneratorFunction?: () => string;
       responseFormat: "V1" | "V2";
-      attachmentId?: string;
+      attachmentIdKeyName?: string;
     },
     mappingConfig: iMappingConfig,
     schemas: PineappleSchemas
@@ -60,7 +60,7 @@ class DynamoDB {
       }
     );
 
-    this.#mapping = new Mapping(entityName, mappingConfig, attachmentId, idGeneratorFunction);
+    this.#mapping = new Mapping(entityName, mappingConfig, attachmentIdKeyName, idGeneratorFunction);
     this.#tableInterface = new TableInterface(tableName);
     this.#schemas = schemas;
     this.#responseFormat = responseFormat;
@@ -140,7 +140,7 @@ class DynamoDB {
         this.#mapping,
         options?.limit,
         options?.exclusiveStartKey,
-        this.#mapping.attachmentId,
+        this.#mapping.attachmentIdKeyName,
         callback
       );
 
