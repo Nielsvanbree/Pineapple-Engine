@@ -1,16 +1,18 @@
 - [Changelog](#changelog)
+  - [\[2.0.1\] - 2023-03-09](#201---2023-03-09)
+    - [Fixed](#fixed)
   - [\[2.0.0\] - 2023-03-05](#200---2023-03-05)
     - [Changed](#changed)
-    - [Fixed](#fixed)
-  - [\[1.2.1\] - 2022-10-12](#121---2022-10-12)
     - [Fixed](#fixed-1)
+  - [\[1.2.1\] - 2022-10-12](#121---2022-10-12)
+    - [Fixed](#fixed-2)
   - [\[1.2.0\] - 2022-10-24](#120---2022-10-24)
     - [Added](#added)
   - [\[1.1.2\] - 2022-10-12](#112---2022-10-12)
-    - [Fixed](#fixed-2)
+    - [Fixed](#fixed-3)
   - [\[1.1.1\] - 2022-10-12](#111---2022-10-12)
     - [Added](#added-1)
-    - [Fixed](#fixed-3)
+    - [Fixed](#fixed-4)
   - [\[1.1.0\] - 2022-10-12](#110---2022-10-12)
     - [Added](#added-2)
     - [Changed](#changed-1)
@@ -24,6 +26,11 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [2.0.1] - 2023-03-09
+
+### Fixed
+- Listing doesn't remove # at the end anymore, because it caused issues with values that started the same, but shouldn't be treated the same.
 
 ## [2.0.0] - 2023-03-05
 Pineapple Engine V2 mainly focuses on attachment entity features. In V1, the attachment feature was expiremental and quite clunky to use. V2 offers full attachment support and in a much cleaner way. Some other smaller changes & fixes have also been implemented. 
