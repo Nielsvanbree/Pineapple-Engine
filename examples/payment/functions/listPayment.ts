@@ -9,9 +9,7 @@ async function list() {
     const { items, lastEvaluatedKey } = await payment.dynamodb.list(
       testEvent,
       {
-        limit: 1,
-        exclusiveStartKey:
-          "eyJzayI6InBheW1lbnQjdmVyc2lvbl8wIiwiZ3NpU2sxIjoicGF5bWVudCNwcm9kdWN0XzAxR0VDWkpINjhIMURHMENHN1dDR1oyODE4I2V4cGlyZWQiLCJnc2lQazEiOiJvcmRlcl8wMUdFQ1pORllBWkhKVlMyQzhIQTdQQllTUCIsInBrIjoicGF5bWVudF8wMUdFQ1pQODlXQTFFTjhWRkVRSDVZMU5SQiJ9",
+        limit: 10,
       },
       (params) => {
         console.log("🚀 ~ file: list.js ~ line 9 ~ list ~ params", params);

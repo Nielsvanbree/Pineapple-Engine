@@ -269,7 +269,7 @@ class TableInterface {
         "#gsiSk1": "gsiSk1",
       },
       ExpressionAttributeValues: {
-        ":gsiSk1": attributes["gsiSk1"].replace(/#$/, ""), // Trim # from string if it's the last character for better inclusion here
+        ":gsiSk1": attributes["gsiSk1"]
       },
     };
 
