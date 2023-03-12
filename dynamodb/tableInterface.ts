@@ -478,16 +478,6 @@ interface iListDynamoRecordsResponse {
   params?: QueryCommandInput
 }
 
-type GetCallbackType = (
-  params?: GetCommandInput,
-  versionParams?: QueryCommandInput,
-  latestVersionParams?: GetCommandInput
-) => {
-  params?: GetCommandInput;
-  versionParams?: QueryCommandInput;
-  latestVersionParams?: GetCommandInput;
-};
-
 export {
   TableInterface,
   QueryCommandInput,
@@ -496,6 +486,5 @@ export {
   iListAllVersionsForEntityResponse,
   iGetDynamoRecordResponse,
   iUpdateDynamoRecordResponse,
-  iListDynamoRecordsResponse,
-  GetCallbackType
+  iListDynamoRecordsResponse
 };
