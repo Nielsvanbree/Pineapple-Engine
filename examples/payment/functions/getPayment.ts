@@ -6,12 +6,18 @@ const payment = new Pineapple(pineappleConfig);
 
 async function getWithVersions() {
   try {
-    const { entity, lastEvaluatedKey } = await payment.dynamodb.get(
+    const { entity, lastEvaluatedKey, versionParams } = await payment.dynamodb.get(
       testEvent,
       {
         listVersions: true,
         limit: 1,
-        exclusiveStartKey: 'eyJwayI6InBheW1lbnRfMDFHRUNaUDg5V0ExRU44VkZFUUg1WTFOUkIiLCJzayI6InBheW1lbnRWZXJzaW9uI3ZlcnNpb25fMDFHRUNaUUJXUzhWVlBaWE5ENFNBUUVLNjkifQ=='
+        exclusiveStartKey: 'eyJwayI6InBheW1lbnRfMDFHRUNaUDg5V0ExRU44VkZFUUg1WTFOUkIiLCJzayI6InBheW1lbnRWZXJzaW9uI3ZlcnNpb25fMDFHRUNaUUJXUzhWVlBaWE5ENFNBUUVLNjkifQ==',
+        paramsOnly: false
+      },
+      {
+        listVersionsCallback: (versionParams, latestVersionParams) => {
+          return { versionParams, latestVersionParams };
+        }
       }
     );
   
@@ -24,9 +30,15 @@ async function getWithVersions() {
 
 async function get() {
   try {
-    const { entity } = await payment.dynamodb.get(
+    const { entity, params } = await payment.dynamodb.get(
       {
         paymentId: "payment_01GECZP89WA1EN8VFEQH5Y1NRB"
+      },
+      { paramsOnly: false },
+      {
+        getCallback: (params) => {
+          return params;
+        }
       }
     );
   

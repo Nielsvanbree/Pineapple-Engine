@@ -4,8 +4,10 @@ import {
   dynamoUpdatePineapple,
   update,
   put,
+  get,
   QueryCommandInput,
   UpdateCommandInput,
+  GetCommandInput,
 } from "../helpers/dynamodb";
 import { Mapping, QueryableAttributes } from "./mapping";
 import { ulid } from "ulid";
@@ -55,7 +57,15 @@ class TableInterface {
     entity: Record<string, any>,
     mappingClassInstance: Mapping,
     Limit?: number,
-    exclusiveStartKey?: string | any
+    exclusiveStartKey?: string | any,
+    callback?: (
+      versionParams: QueryCommandInput,
+      latestVersionParams: GetCommandInput
+    ) => {
+      versionParams: QueryCommandInput;
+      latestVersionParams: GetCommandInput;
+    },
+    paramsOnly?: boolean
   ): Promise<iListAllVersionsForEntityResponse> {
     exclusiveStartKey = decodeExclusiveStartKey(exclusiveStartKey);
     entity.version = "";
@@ -65,6 +75,13 @@ class TableInterface {
       mappingClassInstance.decodeEntity.bind(mappingClassInstance);
 
     const { pk, sk } = encoder(entity);
+
+    let latestVersionParamsObject = (await this.getSpecificVersion(
+      pk,
+      `${sk}0`,
+      decoder,
+      paramsOnly
+    )) as GetCommandInput;
 
     let params: QueryCommandInput = {
       TableName: this.tableName,
@@ -85,9 +102,25 @@ class TableInterface {
 
     if (exclusiveStartKey) params.ExclusiveStartKey = exclusiveStartKey;
 
+
+    if (callback && typeof callback === "function") {
+      const { versionParams, latestVersionParams } = callback(params, latestVersionParamsObject);
+      
+      params = versionParams;
+      latestVersionParamsObject = latestVersionParams;
+    }
+
+    if (paramsOnly)
+      return {
+        versionParams: {
+          versions: params,
+          latestVersion: latestVersionParamsObject,
+        },
+      };
+
     const [{ items, lastEvaluatedKey }, latestVersion] = await Promise.all([
       query(params),
-      this.getSpecificVersion(pk, `${sk}0`, decoder),
+      latestVersionParamsObject,
     ]);
 
     const response: iListAllVersionsForEntityResponse = {
@@ -112,7 +145,9 @@ class TableInterface {
 
   async getDynamoRecord(
     entity: Record<string, any>,
-    mappingClassInstance: Mapping
+    mappingClassInstance: Mapping,
+    callback?: (params: GetCommandInput) => GetCommandInput,
+    paramsOnly?: boolean
   ): Promise<iGetDynamoRecordResponse> {
     const encoder: Function =
       mappingClassInstance.encodeEntity.bind(mappingClassInstance);
@@ -127,11 +162,20 @@ class TableInterface {
         `${mappingClassInstance.entityValues.entity}Version`
       );
 
-    const res = await dynamoGetPineapple(this.tableName, pk, sk);
-    if (!res) return {};
+    let params = (await dynamoGetPineapple(this.tableName, pk, sk, true)) as GetCommandInput;
+
+    if (callback && typeof callback === "function")
+      params = callback(params);
+
+    if (paramsOnly)
+      return { params };
+
+    const { item } = await get(params);
+
+    if (!item) return {};
 
     return {
-      entity: decoder(res),
+      entity: decoder(item),
     };
   }
 
@@ -139,6 +183,7 @@ class TableInterface {
     entity: Record<string, any>,
     mappingClassInstance: Mapping,
     username: string,
+    paramsOnly?: boolean,
     callback?: (params: UpdateCommandInput) => UpdateCommandInput
   ): Promise<iUpdateDynamoRecordResponse> {
     const encoder =
@@ -183,7 +228,11 @@ class TableInterface {
         else {
           if (!newItem) {
             // Get the missing data from DynamoDB in case of an update
-            const entity = await dynamoGetPineapple(this.tableName, pk, sk);
+            const entity = (await dynamoGetPineapple(
+              this.tableName,
+              pk,
+              sk
+            )) as Record<string, any>;
             if (entity) {
               let stopGsiSk1Construction = false;
               gsiSk1Misses.forEach((missingKey: string) => {
@@ -223,6 +272,8 @@ class TableInterface {
         params = callback(params);
       }
 
+      if (paramsOnly) return { params };
+
       decodedRecord = decoder((await update(params)).item);
     }
 
@@ -238,7 +289,8 @@ class TableInterface {
     Limit?: number,
     exclusiveStartKey?: string | any,
     attachmentIdKeyName?: string | undefined,
-    callback?: (params: QueryCommandInput) => QueryCommandInput
+    callback?: (params: QueryCommandInput) => QueryCommandInput,
+    paramsOnly?: boolean
   ): Promise<iListDynamoRecordsResponse> {
     exclusiveStartKey = decodeExclusiveStartKey(exclusiveStartKey);
     const encoder: Function =
@@ -246,14 +298,16 @@ class TableInterface {
     const decoder: Function =
       mappingClassInstance.decodeEntity.bind(mappingClassInstance);
 
-    const attachmentIdKeyNamePresent = attachmentIdKeyName && entity[attachmentIdKeyName] ? true : false;
+    const attachmentIdKeyNamePresent =
+      attachmentIdKeyName && entity[attachmentIdKeyName] ? true : false;
 
     let { pk, newItem, attributes, queryableAttributes, gsiSk1Contains } =
       encoder(entity);
 
     // If newItem is true it means there was no pk to query for, but one was generated automatically
     if (!newItem) attributes = { pk, ...attributes };
-    if (attachmentIdKeyName && !attachmentIdKeyNamePresent) delete attributes[attachmentIdKeyName];
+    if (attachmentIdKeyName && !attachmentIdKeyNamePresent)
+      delete attributes[attachmentIdKeyName];
     if (attachmentIdKeyName && pk && pk !== "undefined") attributes.pk = pk;
 
     const { keyName, indexName } = getKeyAndIndexToUse(
@@ -269,7 +323,7 @@ class TableInterface {
         "#gsiSk1": "gsiSk1",
       },
       ExpressionAttributeValues: {
-        ":gsiSk1": attributes["gsiSk1"]
+        ":gsiSk1": attributes["gsiSk1"],
       },
     };
 
@@ -295,15 +349,16 @@ class TableInterface {
 
     if (callback && typeof callback === "function") params = callback(params);
 
+    if (paramsOnly)
+      return { params };
+
     const response = await query(params);
 
-    response.items = await Promise.all(
-      response.items.map(async (item: any) => {
-        const decoded = { ...decoder(item) };
+    response.items = response.items.map((item: any) => {
+      const decoded = { ...decoder(item) };
 
-        return { entity: decoded };
-      })
-    );
+      return { entity: decoded };
+    });
 
     return {
       items: response.items,
@@ -314,16 +369,22 @@ class TableInterface {
   async getSpecificVersion(
     pk: string,
     sk: string,
-    decoder: Function
-  ): Promise<Record<string, any> | undefined> {
+    decoder: Function,
+    paramsOnly?: boolean
+  ): Promise<Record<string, any> | undefined | GetCommandInput> {
     if (!pk || !sk) return undefined;
 
-    const version = await dynamoGetPineapple(this.tableName, pk, sk);
+    const version = await dynamoGetPineapple(
+      this.tableName,
+      pk,
+      sk,
+      paramsOnly
+    );
     if (!version)
       // Any custom error handling when the object does not exist can go here
       return undefined;
 
-    return decoder(version);
+    return paramsOnly ? version : decoder(version);
   }
 }
 
@@ -396,27 +457,46 @@ function decodeExclusiveStartKey(exclusiveStartKey: string | any): any {
 
 interface iGetDynamoRecordResponse {
   entity?: Record<string, any>;
+  params?: GetCommandInput;
 }
 interface iListAllVersionsForEntityResponse {
   entity?: Record<string, any>;
   lastEvaluatedKey?: string;
+  versionParams?: {
+    versions?: QueryCommandInput;
+    latestVersion?: GetCommandInput;
+  };
 }
 
 interface iUpdateDynamoRecordResponse {
   entity?: Record<string, any>;
+  params?: UpdateCommandInput;
 }
 
 interface iListDynamoRecordsResponse {
-  items: Array<Record<string, any>>;
-  lastEvaluatedKey: string;
+  items?: Array<Record<string, any>>;
+  lastEvaluatedKey?: string;
+  params?: QueryCommandInput
 }
+
+type GetCallbackType = (
+  params?: GetCommandInput,
+  versionParams?: QueryCommandInput,
+  latestVersionParams?: GetCommandInput
+) => {
+  params?: GetCommandInput;
+  versionParams?: QueryCommandInput;
+  latestVersionParams?: GetCommandInput;
+};
 
 export {
   TableInterface,
   QueryCommandInput,
   UpdateCommandInput,
+  GetCommandInput,
   iListAllVersionsForEntityResponse,
   iGetDynamoRecordResponse,
   iUpdateDynamoRecordResponse,
   iListDynamoRecordsResponse,
+  GetCallbackType
 };

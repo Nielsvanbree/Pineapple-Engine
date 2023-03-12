@@ -6,13 +6,15 @@ const payment = new Pineapple(pineappleConfig);
 
 async function list() {
   try {
-    const { items, lastEvaluatedKey } = await payment.dynamodb.list(
+    const { items, lastEvaluatedKey, params } = await payment.dynamodb.list(
       testEvent,
       {
         limit: 10,
+        paramsOnly: false
       },
       (params) => {
         console.log("🚀 ~ file: list.js ~ line 9 ~ list ~ params", params);
+        params.Limit = 100
 
         return params;
       }
