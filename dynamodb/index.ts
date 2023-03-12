@@ -2,6 +2,7 @@ import {
   TableInterface,
   QueryCommandInput,
   UpdateCommandInput,
+  GetCommandInput,
   iGetDynamoRecordResponse,
   iListAllVersionsForEntityResponse,
   iUpdateDynamoRecordResponse,
@@ -60,7 +61,12 @@ class DynamoDB {
       }
     );
 
-    this.#mapping = new Mapping(entityName, mappingConfig, attachmentIdKeyName, idGeneratorFunction);
+    this.#mapping = new Mapping(
+      entityName,
+      mappingConfig,
+      attachmentIdKeyName,
+      idGeneratorFunction
+    );
     this.#tableInterface = new TableInterface(tableName);
     this.#schemas = schemas;
     this.#responseFormat = responseFormat;
@@ -72,6 +78,17 @@ class DynamoDB {
       listVersions?: boolean;
       limit?: number;
       exclusiveStartKey?: string;
+      paramsOnly?: boolean;
+    },
+    callbacks?: {
+      getCallback?: (params: GetCommandInput) => GetCommandInput,
+      listVersionsCallback?: (
+        versionParams: QueryCommandInput,
+        latestVersionParams: GetCommandInput
+      ) => {
+        versionParams: QueryCommandInput;
+        latestVersionParams: GetCommandInput;
+      }
     }
   ): Promise<iListAllVersionsForEntityResponse & iGetDynamoRecordResponse> {
     validate(
@@ -87,9 +104,22 @@ class DynamoDB {
             not: true,
             then: j.forbidden(),
           }),
+          paramsOnly: j.bool().default(false),
         }),
+        callbacks: j.object().keys({
+          getCallback: j.when("/options.listVersions", {
+            is: true,
+            then: j.forbidden(),
+            otherwise: j.func()
+          }),
+          listVersionsCallback: j.when("/options.listVersions", {
+            is: true,
+            then: j.func(),
+            otherwise: j.forbidden()
+          })
+        })
       }),
-      { entity, options },
+      { entity, options, callbacks },
       undefined,
       "interfaceInput",
       () => {
@@ -101,18 +131,34 @@ class DynamoDB {
       return this.#listAllVersionsForEntity(
         entity,
         options?.limit,
-        options?.exclusiveStartKey
+        options?.exclusiveStartKey,
+        options?.paramsOnly,
+        callbacks?.listVersionsCallback
       );
 
     this.#validateRequiredSchemaForFunction("getSchema");
-    const validatedEntity = validate(this.#schemas.getSchema, entity, undefined, "interface");
+    const validatedEntity = validate(
+      this.#schemas.getSchema,
+      entity,
+      undefined,
+      "interface"
+    );
 
-    return this.#tableInterface.getDynamoRecord(validatedEntity, this.#mapping);
+    return this.#tableInterface.getDynamoRecord(
+      validatedEntity,
+      this.#mapping,
+      callbacks?.getCallback,
+      options?.paramsOnly
+    );
   }
 
   async list(
     entity: Record<string, any>,
-    options?: { limit?: number; exclusiveStartKey?: string },
+    options?: {
+      limit?: number;
+      exclusiveStartKey?: string;
+      paramsOnly?: boolean;
+    },
     callback?: (params: QueryCommandInput) => QueryCommandInput
   ): Promise<iListDynamoRecordsResponse> {
     this.#validateRequiredSchemaForFunction("listEntitySchema");
@@ -122,6 +168,7 @@ class DynamoDB {
         options: j.object().keys({
           limit: j.number().integer().min(1),
           exclusiveStartKey: j.string(),
+          paramsOnly: j.bool().default(false),
         }),
       }),
       { entity, options },
@@ -132,30 +179,41 @@ class DynamoDB {
       }
     );
 
-    const validatedEntity = validate(this.#schemas.listEntitySchema, entity, undefined, "interface");
+    const validatedEntity = validate(
+      this.#schemas.listEntitySchema,
+      entity,
+      undefined,
+      "interface"
+    );
 
-    const { items, lastEvaluatedKey } =
+    const { items, lastEvaluatedKey, params } =
       await this.#tableInterface.listDynamoRecords(
         validatedEntity,
         this.#mapping,
         options?.limit,
         options?.exclusiveStartKey,
         this.#mapping.attachmentIdKeyName,
-        callback
+        callback,
+        options?.paramsOnly
       );
+
+    if (options?.paramsOnly) return { params };
 
     return {
       items:
         this.#responseFormat === "V1"
           ? items
-          : items.map(({ entity }) => ({ ...entity })),
+          : items?.map(({ entity }) => ({ ...entity })),
       lastEvaluatedKey,
     };
   }
 
   async update(
     entity: Record<string, any>,
-    options: { executorUsername: string },
+    options: {
+      executorUsername: string;
+      paramsOnly?: boolean;
+    },
     callback?: (params: UpdateCommandInput) => UpdateCommandInput
   ): Promise<iUpdateDynamoRecordResponse> {
     this.#validateRequiredSchemaForFunction("interfaceUpdateSchema");
@@ -167,6 +225,7 @@ class DynamoDB {
           .object()
           .keys({
             executorUsername: j.string().required(),
+            paramsOnly: j.bool().default(false),
           })
           .required(),
       }),
@@ -204,12 +263,18 @@ class DynamoDB {
       entity,
     };
 
-    const { entity: validatedEntity } = validate(schema, input, undefined, "interface");
+    const { entity: validatedEntity } = validate(
+      schema,
+      input,
+      undefined,
+      "interface"
+    );
 
     return this.#tableInterface.updateDynamoRecord(
       validatedEntity,
       this.#mapping,
       options.executorUsername,
+      options.paramsOnly,
       callback
     );
   }
@@ -267,16 +332,31 @@ class DynamoDB {
   async #listAllVersionsForEntity(
     { version, ...entity }: Record<string, any>,
     limit?: number,
-    exclusiveStartKey?: string | any
+    exclusiveStartKey?: string | any,
+    paramsOnly?: boolean | undefined,
+    callback?: (
+      versionParams: QueryCommandInput,
+      latestVersionParams: GetCommandInput
+    ) => {
+      versionParams: QueryCommandInput;
+      latestVersionParams: GetCommandInput;
+    }
   ): Promise<iListAllVersionsForEntityResponse> {
     this.#validateRequiredSchemaForFunction("getSchema");
-    const validatedEntity = validate(this.#schemas.getSchema, entity, undefined, "interface");
+    const validatedEntity = validate(
+      this.#schemas.getSchema,
+      entity,
+      undefined,
+      "interface"
+    );
 
     return this.#tableInterface.listAllVersionsForEntity(
       validatedEntity,
       this.#mapping,
       limit,
-      exclusiveStartKey
+      exclusiveStartKey,
+      callback,
+      paramsOnly
     );
   }
 

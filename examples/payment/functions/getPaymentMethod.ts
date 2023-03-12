@@ -6,11 +6,11 @@ const paymentMethod = new Pineapple(pineappleConfig);
 
 async function getWithVersions() {
   try {
-    const { entity, lastEvaluatedKey } = await paymentMethod.dynamodb.get(
+    const { entity, lastEvaluatedKey, versionParams } = await paymentMethod.dynamodb.get(
       testEvent,
       {
         listVersions: true,
-        limit: 1,
+        limit: 2,
         exclusiveStartKey: "eyJwayI6InBheW1lbnRfMDFHRUNaUDg5V0ExRU44VkZFUUg1WTFOUkIiLCJzayI6InBheW1lbnRNZXRob2RWZXJzaW9uI3BheW1lbnRNZXRob2RfMDFHVFNCUVdLVFBLUVk4VERaSlA0V1g1NjgjdmVyc2lvbl8wMUdUU0JSOFJEREJDOENDM01aUEpGR0tFQyJ9"
       }
     );
