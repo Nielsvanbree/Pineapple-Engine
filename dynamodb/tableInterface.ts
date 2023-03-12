@@ -80,7 +80,7 @@ class TableInterface {
       pk,
       `${sk}0`,
       decoder,
-      paramsOnly
+      true
     )) as GetCommandInput;
 
     let params: QueryCommandInput = {
@@ -102,7 +102,6 @@ class TableInterface {
 
     if (exclusiveStartKey) params.ExclusiveStartKey = exclusiveStartKey;
 
-
     if (callback && typeof callback === "function") {
       const { versionParams, latestVersionParams } = callback(params, latestVersionParamsObject);
       
@@ -118,13 +117,13 @@ class TableInterface {
         },
       };
 
-    const [{ items, lastEvaluatedKey }, latestVersion] = await Promise.all([
+    const [{ items, lastEvaluatedKey }, { item: latestVersion }] = await Promise.all([
       query(params),
-      latestVersionParamsObject,
+      get(latestVersionParamsObject),
     ]);
 
     const response: iListAllVersionsForEntityResponse = {
-      entity: latestVersion,
+      entity: decoder(latestVersion),
     };
     if (lastEvaluatedKey)
       response.lastEvaluatedKey = encodeLastEvaluatedKey(lastEvaluatedKey);
