@@ -26,8 +26,11 @@
   "author": "Niels van Bree <niels@levarne.nl> (http://levarne.com/en)",
   "license": "ISC",
   "files": [
-    "dist/**/*",
-    "!dist/examples/**/*"
+    "dist/dynamodb/**/*",
+    "dist/helpers/**/*",
+    "dist/pineapple.d.ts",
+    "dist/pineapple.js",
+    "dist/pineapple.js.map"
   ],
   "types": "dist/pineapple.d.ts",
   "dependencies": {
