@@ -16,7 +16,7 @@ async function update() {
         return params;
       }
     );
-  
+
     return newPayment;
   } catch (error) {
     console.error("🚀 ~ file: update.js ~ line 24 ~ update ~ error", error);

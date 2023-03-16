@@ -1,18 +1,8 @@
 {
+  "extends": "./tsconfig-base.json",
   "compilerOptions": {
-    "target": "es2020", 
-    "module": "commonjs", 
-    "declaration": true,
-    "sourceMap": true, 
-    "outDir": "./dist", 
-    "strict": true, 
-    "moduleResolution": "node", 
-    "esModuleInterop": true,
-    "forceConsistentCasingInFileNames": true,
-    "resolveJsonModule": true,
-  },
-  "exclude": [
-    "node_modules",
-    "dist/**/*"
-  ]
+    "module": "esnext", 
+    "outDir": "dist/mjs",
+    "target": "esnext"
+  }
 }

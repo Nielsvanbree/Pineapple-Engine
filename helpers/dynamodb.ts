@@ -58,8 +58,9 @@ async function get(params: GetCommandInput): Promise<TransformResult> {
 async function dynamoGetPineapple(
   TableName: string,
   pk: string,
-  sk: string
-): Promise<Record<string, any>> {
+  sk: string,
+  paramsOnly?: boolean
+): Promise<Record<string, any> | GetCommandInput> {
   const params: GetCommandInput = {
     TableName,
     Key: {
@@ -67,6 +68,9 @@ async function dynamoGetPineapple(
       sk,
     },
   };
+
+  if (paramsOnly)
+    return params;
 
   return (await get(params)).item;
 }
@@ -328,7 +332,12 @@ export {
   stripDynamoObject,
   QueryCommandInput,
   UpdateCommandInput,
+  GetCommandInput,
   DynamoDBStreamEvent,
   DynamoDBRecord,
-  AttributeValue
+  AttributeValue,
+  documentClient,
+  DynamoDB,
+  DynamoDBDocument,
+  TranslateConfig
 };

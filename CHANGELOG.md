@@ -1,23 +1,26 @@
 - [Changelog](#changelog)
+  - [\[2.1.0\] - 2023-03-16](#210---2023-03-16)
+  - [Added](#added)
+  - [Fixed](#fixed)
   - [\[2.0.1\] - 2023-03-09](#201---2023-03-09)
-    - [Fixed](#fixed)
+    - [Fixed](#fixed-1)
   - [\[2.0.0\] - 2023-03-05](#200---2023-03-05)
     - [Changed](#changed)
-    - [Fixed](#fixed-1)
-  - [\[1.2.1\] - 2022-10-12](#121---2022-10-12)
     - [Fixed](#fixed-2)
-  - [\[1.2.0\] - 2022-10-24](#120---2022-10-24)
-    - [Added](#added)
-  - [\[1.1.2\] - 2022-10-12](#112---2022-10-12)
+  - [\[1.2.1\] - 2022-10-12](#121---2022-10-12)
     - [Fixed](#fixed-3)
-  - [\[1.1.1\] - 2022-10-12](#111---2022-10-12)
+  - [\[1.2.0\] - 2022-10-24](#120---2022-10-24)
     - [Added](#added-1)
+  - [\[1.1.2\] - 2022-10-12](#112---2022-10-12)
     - [Fixed](#fixed-4)
-  - [\[1.1.0\] - 2022-10-12](#110---2022-10-12)
+  - [\[1.1.1\] - 2022-10-12](#111---2022-10-12)
     - [Added](#added-2)
+    - [Fixed](#fixed-5)
+  - [\[1.1.0\] - 2022-10-12](#110---2022-10-12)
+    - [Added](#added-3)
     - [Changed](#changed-1)
   - [\[1.0.0\] - 2022-10-04](#100---2022-10-04)
-    - [Added](#added-3)
+    - [Added](#added-4)
 
 
 # Changelog
@@ -26,6 +29,16 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [2.1.0] - 2023-03-16
+
+## Added
+- Option to retrieve only params and not execute calls
+- Params callbacks for get with and without versions
+
+## Fixed
+- Examples folder shouldn't be in the package contents
+- CommonJS & ESModule support
 
 ## [2.0.1] - 2023-03-09
 
