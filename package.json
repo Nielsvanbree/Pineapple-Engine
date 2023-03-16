@@ -1,6 +1,6 @@
 {
   "name": "@levarne/pineapple-engine",
-  "version": "2.1.0",
+  "version": "2.1.1",
   "description": "Fruitful Serverless Pineapples will rule the world 1 day",
   "main": "dist/cjs/pineapple.js",
   "module": "dist/mjs/pineapple.js",
@@ -26,7 +26,7 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "tsc && node dist/pineapple.js",
     "build": "rm -fr dist/* && tsc -p tsconfig.json && tsc -p tsconfig-cjs.json && ./fixup",
-    "publish": "tsc && npm publish --access public"
+    "publish": "npm publish --access public"
   },
   "keywords": [
     "dynamodb",
@@ -44,11 +44,13 @@
     "dist/mjs/pineapple.d.ts",
     "dist/mjs/pineapple.js",
     "dist/mjs/pineapple.js.map",
+    "dist/mjs/package.json",
     "dist/cjs/dynamodb/**/*",
     "dist/cjs/helpers/**/*",
     "dist/cjs/pineapple.d.ts",
     "dist/cjs/pineapple.js",
-    "dist/cjs/pineapple.js.map"
+    "dist/cjs/pineapple.js.map",
+    "dist/cjs/package.json"
   ],
   "types": "dist/cjs/pineapple.d.ts",
   "dependencies": {
