@@ -1,18 +1,31 @@
 {
   "name": "@levarne/pineapple-engine",
-  "version": "2.0.1",
+  "version": "2.1.0",
   "description": "Fruitful Serverless Pineapples will rule the world 1 day",
-  "main": "dist/pineapple.js",
+  "main": "dist/cjs/pineapple.js",
+  "module": "dist/mjs/pineapple.js",
   "exports": {
-    ".": "./dist/pineapple.js",
-    "./helpers/dynamodb": "./dist/helpers/dynamodb.js",
-    "./helpers/joi": "./dist/helpers/joi.js",
-    "./helpers/utils": "./dist/helpers/utils.js"
+    ".": {
+     "import": "./dist/mjs/pineapple.js",
+     "require": "./dist/cjs/pineapple.js"
+    },
+    "./helpers/dynamodb": {
+      "import": "./dist/mjs/helpers/dynamodb.js",
+      "require": "./dist/cjs/helpers/dynamodb.js"
+    },
+    "./helpers/joi": {
+      "import": "./dist/mjs/helpers/joi.js",
+      "require": "./dist/cjs/helpers/joi.js"
+    },
+    "./helpers/utils": {
+      "import": "./dist/mjs/helpers/utils.js",
+      "require": "./dist/cjs/helpers/utils.js"
+    }
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "tsc && node dist/pineapple.js",
-    "build": "tsc",
+    "build": "rm -fr dist/* && tsc -p tsconfig.json && tsc -p tsconfig-cjs.json && ./fixup",
     "publish": "tsc && npm publish --access public"
   },
   "keywords": [
@@ -26,13 +39,18 @@
   "author": "Niels van Bree <niels@levarne.nl> (http://levarne.com/en)",
   "license": "ISC",
   "files": [
-    "dist/dynamodb/**/*",
-    "dist/helpers/**/*",
-    "dist/pineapple.d.ts",
-    "dist/pineapple.js",
-    "dist/pineapple.js.map"
+    "dist/mjs/dynamodb/**/*",
+    "dist/mjs/helpers/**/*",
+    "dist/mjs/pineapple.d.ts",
+    "dist/mjs/pineapple.js",
+    "dist/mjs/pineapple.js.map",
+    "dist/cjs/dynamodb/**/*",
+    "dist/cjs/helpers/**/*",
+    "dist/cjs/pineapple.d.ts",
+    "dist/cjs/pineapple.js",
+    "dist/cjs/pineapple.js.map"
   ],
-  "types": "dist/pineapple.d.ts",
+  "types": "dist/cjs/pineapple.d.ts",
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.178.0",
     "@aws-sdk/lib-dynamodb": "^3.178.0",
