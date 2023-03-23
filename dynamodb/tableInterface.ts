@@ -103,8 +103,11 @@ class TableInterface {
     if (exclusiveStartKey) params.ExclusiveStartKey = exclusiveStartKey;
 
     if (callback && typeof callback === "function") {
-      const { versionParams, latestVersionParams } = callback(params, latestVersionParamsObject);
-      
+      const { versionParams, latestVersionParams } = callback(
+        params,
+        latestVersionParamsObject
+      );
+
       params = versionParams;
       latestVersionParamsObject = latestVersionParams;
     }
@@ -117,10 +120,8 @@ class TableInterface {
         },
       };
 
-    const [{ items, lastEvaluatedKey }, { item: latestVersion }] = await Promise.all([
-      query(params),
-      get(latestVersionParamsObject),
-    ]);
+    const [{ items, lastEvaluatedKey }, { item: latestVersion }] =
+      await Promise.all([query(params), get(latestVersionParamsObject)]);
 
     const response: iListAllVersionsForEntityResponse = {
       entity: decoder(latestVersion),
@@ -161,13 +162,16 @@ class TableInterface {
         `${mappingClassInstance.entityValues.entity}Version`
       );
 
-    let params = (await dynamoGetPineapple(this.tableName, pk, sk, true)) as GetCommandInput;
+    let params = (await dynamoGetPineapple(
+      this.tableName,
+      pk,
+      sk,
+      true
+    )) as GetCommandInput;
 
-    if (callback && typeof callback === "function")
-      params = callback(params);
+    if (callback && typeof callback === "function") params = callback(params);
 
-    if (paramsOnly)
-      return { params };
+    if (paramsOnly) return { params };
 
     const { item } = await get(params);
 
@@ -250,7 +254,11 @@ class TableInterface {
             }
           }
 
-          if (attributes.gsiSk1.charAt(attributes.gsiSk1.length - 1) === "#" && !stopGsiSk1Construction)
+          if (
+            attributes.gsiSk1.charAt(attributes.gsiSk1.length - 1) === "#" &&
+            ((!newItem && !stopGsiSk1Construction) ||
+              (newItem && gsiSk1Misses?.length === 0))
+          )
             attributes.gsiSk1 = attributes.gsiSk1.slice(0, -1);
         }
       }
@@ -352,8 +360,7 @@ class TableInterface {
 
     if (callback && typeof callback === "function") params = callback(params);
 
-    if (paramsOnly)
-      return { params };
+    if (paramsOnly) return { params };
 
     const response = await query(params);
 
@@ -479,7 +486,7 @@ interface iUpdateDynamoRecordResponse {
 interface iListDynamoRecordsResponse {
   items?: Array<Record<string, any>>;
   lastEvaluatedKey?: string;
-  params?: QueryCommandInput
+  params?: QueryCommandInput;
 }
 
 export {
@@ -490,5 +497,5 @@ export {
   iListAllVersionsForEntityResponse,
   iGetDynamoRecordResponse,
   iUpdateDynamoRecordResponse,
-  iListDynamoRecordsResponse
+  iListDynamoRecordsResponse,
 };
