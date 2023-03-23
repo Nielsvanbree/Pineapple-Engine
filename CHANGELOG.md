@@ -40,7 +40,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Fixed
 - GsiSk creation should end with a # divider also on creation of an item and not just on an update
-- 
+  
 ## [2.1.3] - 2023-03-16
 
 ## Fixed
