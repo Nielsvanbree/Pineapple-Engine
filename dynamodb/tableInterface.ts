@@ -257,7 +257,7 @@ class TableInterface {
           if (
             attributes.gsiSk1.charAt(attributes.gsiSk1.length - 1) === "#" &&
             ((!newItem && !stopGsiSk1Construction) ||
-              (newItem && gsiSk1Misses?.length > 0))
+              (newItem && gsiSk1Misses?.length === 0))
           )
             attributes.gsiSk1 = attributes.gsiSk1.slice(0, -1);
         }
