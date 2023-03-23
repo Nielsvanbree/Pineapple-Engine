@@ -217,6 +217,7 @@ class TableInterface {
           gsiSk1Contains.length < sortKeyConstruction.gsiSk1.length)
       ) {
         let shouldGsiSk1BeUpdated;
+
         sortKeyConstruction.gsiSk1.forEach((key: string) => {
           const encodedKeyName = usedMapping[key] ?? key;
           if (attributes[encodedKeyName] || newItem)
@@ -225,6 +226,8 @@ class TableInterface {
 
         if (!shouldGsiSk1BeUpdated) delete attributes.gsiSk1;
         else {
+          let stopGsiSk1Construction = false;
+
           if (!newItem) {
             // Get the missing data from DynamoDB in case of an update
             const entity = (await dynamoGetPineapple(
@@ -232,8 +235,8 @@ class TableInterface {
               pk,
               sk
             )) as Record<string, any>;
+
             if (entity) {
-              let stopGsiSk1Construction = false;
               gsiSk1Misses.forEach((missingKey: string) => {
                 if (
                   !stopGsiSk1Construction &&
@@ -246,7 +249,8 @@ class TableInterface {
               });
             }
           }
-          if (attributes.gsiSk1.charAt(attributes.gsiSk1.length - 1) === "#")
+
+          if (attributes.gsiSk1.charAt(attributes.gsiSk1.length - 1) === "#" && !stopGsiSk1Construction)
             attributes.gsiSk1 = attributes.gsiSk1.slice(0, -1);
         }
       }
