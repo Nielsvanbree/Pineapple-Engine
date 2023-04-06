@@ -316,7 +316,7 @@ class TableInterface {
       encoder(entity);
 
     // If newItem is true it means there was no pk to query for, but one was generated automatically
-    if (!newItem) attributes = { pk, ...attributes };
+    if (!newItem && pk !== "undefined") attributes = { pk, ...attributes };
     if (attachmentIdKeyName && !attachmentIdKeyNamePresent)
       delete attributes[attachmentIdKeyName];
     if (attachmentIdKeyName && pk && pk !== "undefined") attributes.pk = pk;
