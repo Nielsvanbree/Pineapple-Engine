@@ -1,29 +1,31 @@
 - [Changelog](#changelog)
-  - [\[2.1.5\] - 2023-03-16](#215---2023-03-16)
+  - [\[2.1.6\] - 2023-04-28](#216---2023-04-28)
   - [Fixed](#fixed)
-  - [\[2.1.4\] - 2023-03-16](#214---2023-03-16)
+  - [\[2.1.5\] - 2023-03-16](#215---2023-03-16)
   - [Fixed](#fixed-1)
-  - [\[2.1.3\] - 2023-03-16](#213---2023-03-16)
+  - [\[2.1.4\] - 2023-03-16](#214---2023-03-16)
   - [Fixed](#fixed-2)
-  - [\[2.1.2\] - 2023-03-16](#212---2023-03-16)
+  - [\[2.1.3\] - 2023-03-16](#213---2023-03-16)
   - [Fixed](#fixed-3)
+  - [\[2.1.2\] - 2023-03-16](#212---2023-03-16)
+  - [Fixed](#fixed-4)
   - [\[2.1.0\] - 2023-03-16](#210---2023-03-16)
   - [Added](#added)
-  - [Fixed](#fixed-4)
+  - [Fixed](#fixed-5)
   - [\[2.0.1\] - 2023-03-09](#201---2023-03-09)
-    - [Fixed](#fixed-5)
+    - [Fixed](#fixed-6)
   - [\[2.0.0\] - 2023-03-05](#200---2023-03-05)
     - [Changed](#changed)
-    - [Fixed](#fixed-6)
-  - [\[1.2.1\] - 2022-10-12](#121---2022-10-12)
     - [Fixed](#fixed-7)
+  - [\[1.2.1\] - 2022-10-12](#121---2022-10-12)
+    - [Fixed](#fixed-8)
   - [\[1.2.0\] - 2022-10-24](#120---2022-10-24)
     - [Added](#added-1)
   - [\[1.1.2\] - 2022-10-12](#112---2022-10-12)
-    - [Fixed](#fixed-8)
+    - [Fixed](#fixed-9)
   - [\[1.1.1\] - 2022-10-12](#111---2022-10-12)
     - [Added](#added-2)
-    - [Fixed](#fixed-9)
+    - [Fixed](#fixed-10)
   - [\[1.1.0\] - 2022-10-12](#110---2022-10-12)
     - [Added](#added-3)
     - [Changed](#changed-1)
@@ -37,6 +39,11 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [2.1.6] - 2023-04-28
+
+## Fixed
+- The generated list params were malformed when listing an attachment without the attachmentKeyIdName in the list params while the attachmentKeyIdName in the mapping was also set as a queryableAttribute. This is now taken into account.
 
 ## [2.1.5] - 2023-03-16
 
