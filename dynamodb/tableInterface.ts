@@ -353,7 +353,9 @@ class TableInterface {
       attributes,
       keyName,
       gsiSk1Contains,
-      decoder
+      decoder,
+      attachmentIdKeyNamePresent, 
+      attachmentIdKeyName
     );
 
     if (exclusiveStartKey) params.ExclusiveStartKey = exclusiveStartKey;
@@ -418,13 +420,18 @@ function addFiltersToListParams(
   attributes: any,
   keyName: string,
   gsiSk1Contains: Array<string>,
-  decoder: Function
+  decoder: Function,
+  attachmentIdKeyNamePresent?: boolean,
+  attachmentIdKeyName?: string
 ): void {
   Object.entries(attributes).forEach(([key, value]) => {
     if (key === keyName || key === "gsiSk1" || gsiSk1Contains.includes(key))
       return;
 
     const decodedKey = getDecodedKeyFromAttribute(key, value, decoder);
+
+    if (!attachmentIdKeyNamePresent && decodedKey === attachmentIdKeyName)
+      return;
 
     if (params.ExpressionAttributeNames)
       params.ExpressionAttributeNames[`#${decodedKey}`] = key;
