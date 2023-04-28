@@ -430,7 +430,7 @@ function addFiltersToListParams(
 
     const decodedKey = getDecodedKeyFromAttribute(key, value, decoder);
 
-    if (!attachmentIdKeyNamePresent && decodedKey === attachmentIdKeyName)
+    if (attachmentIdKeyName && !attachmentIdKeyNamePresent && decodedKey === attachmentIdKeyName)
       return;
 
     if (params.ExpressionAttributeNames)
