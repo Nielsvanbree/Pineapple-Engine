@@ -1,0 +1,26 @@
+{
+  "name": "example_folder",
+  "version": "2.1.6",
+  "description": "Example folder for Pineapple calls",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Niels van Bree <niels@levarne.nl> (http://levarne.com/en)",
+  "license": "ISC",
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.178.0",
+    "@aws-sdk/lib-dynamodb": "^3.178.0",
+    "@aws-sdk/util-dynamodb": "^3.186.0",
+    "joi": "^17.6.2",
+    "ulid": "^2.3.0"
+  },
+  "peerDependencies": {
+    "joi": "^17.6.2"
+  },
+  "devDependencies": {
+    "@types/node": "^18.7.13",
+    "@types/uuid": "^8.3.4",
+    "ts-node": "^10.9.1",
+    "typescript": "^5.0.4"
+  }
+}

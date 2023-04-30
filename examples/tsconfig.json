@@ -1,0 +1,26 @@
+{
+  "extends": "./tsconfig.paths.json",
+  "compilerOptions": {
+    "lib": ["ESNext"],
+    "moduleResolution": "nodenext",
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "removeComments": true,
+    "sourceMap": true,
+    "target": "ES2020",
+    "outDir": "lib",
+    "allowSyntheticDefaultImports": true,
+    "resolveJsonModule": true
+  },
+  "typeRoots": ["./node_modules/@types"],
+  "include": [
+    "payment/**/*.ts",
+    "../dist/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules/**/*",
+    ".webpack/**/*",
+    "_warmup/**/*",
+    ".vscode/**/*"
+  ]
+}
