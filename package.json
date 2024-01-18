@@ -1,6 +1,6 @@
 {
   "name": "@levarne/pineapple-engine",
-  "version": "2.1.6",
+  "version": "2.1.7",
   "description": "Fruitful Serverless Pineapples will rule the world 1 day",
   "main": "dist/cjs/pineapple.js",
   "module": "dist/mjs/pineapple.js",
@@ -75,10 +75,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Nielsvanbree/Accelerator-Pineapple.git"
+    "url": "git+https://github.com/LeVarneBV/Pineapple-Engine.git"
   },
   "bugs": {
-    "url": "https://github.com/Nielsvanbree/Accelerator-Pineapple/issues"
+    "url": "https://github.com/LeVarneBV/Pineapple-Engine/issues"
   },
-  "homepage": "https://github.com/Nielsvanbree/Accelerator-Pineapple#readme"
+  "homepage": "https://github.com/LeVarneBV/Pineapple-Engine#readme"
 }
