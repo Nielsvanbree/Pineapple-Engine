@@ -1,13 +1,13 @@
 {
   "name": "@levarne/pineapple-engine",
-  "version": "2.1.7",
+  "version": "2.1.8",
   "description": "Fruitful Serverless Pineapples will rule the world 1 day",
   "main": "dist/cjs/pineapple.js",
   "module": "dist/mjs/pineapple.js",
   "exports": {
     ".": {
-     "import": "./dist/mjs/pineapple.js",
-     "require": "./dist/cjs/pineapple.js"
+      "import": "./dist/mjs/pineapple.js",
+      "require": "./dist/cjs/pineapple.js"
     },
     "./helpers/dynamodb": {
       "import": "./dist/mjs/helpers/dynamodb.js",
