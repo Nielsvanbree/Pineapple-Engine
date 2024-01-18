@@ -12,6 +12,7 @@ import {
   PutCommandOutput,
 } from "@aws-sdk/lib-dynamodb";
 import { unmarshall } from "@aws-sdk/util-dynamodb";
+import AWSXRay from "aws-xray-sdk-core";
 
 const marshallOptions: {
   convertEmptyValues?: boolean;
@@ -35,7 +36,9 @@ const unmarshallOptions: {
 
 const translateConfig: TranslateConfig = { marshallOptions, unmarshallOptions };
 
-const dynamoClient = new DynamoDB({ region: process.env.AWS_REGION });
+const dynamoClient = process.env.IS_LOCAL !== "true"
+  ? AWSXRay.captureAWSv3Client(new DynamoDB({ region: process.env.AWS_REGION }))
+  : new DynamoDB({ region: process.env.AWS_REGION });
 const documentClient = DynamoDBDocument.from(dynamoClient, translateConfig);
 
 async function get(params: GetCommandInput): Promise<TransformResult> {
