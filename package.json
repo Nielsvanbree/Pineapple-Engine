@@ -1,6 +1,6 @@
 {
   "name": "@levarne/pineapple-engine",
-  "version": "2.2.0",
+  "version": "2.2.1",
   "description": "Fruitful Serverless Pineapples will rule the world 1 day",
   "main": "dist/cjs/pineapple.js",
   "module": "dist/mjs/pineapple.js",
